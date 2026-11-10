@@ -1,0 +1,125 @@
+package nexora.printer.presentation.settings
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import nexora.printer.domain.model.*
+import nexora.printer.domain.repository.PreferencesRepository
+import nexora.printer.domain.repository.PrinterRepository
+import nexora.printer.presentation.preview.*
+import nexora.printer.presentation.printers.PrinterProfileEditorDialog
+import javax.inject.Inject
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val prefs: PreferencesRepository,
+    private val printers: PrinterRepository
+) : ViewModel() {
+    val preferences: StateFlow<AppPreferences> = prefs.preferences
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppPreferences())
+    val printerList: StateFlow<List<PrinterProfile>> = printers.observePrinters()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setMode(m: DefaultPrinterMode) = launch { prefs.setMode(m) }
+    fun setTheme(t: ThemeMode) = launch { prefs.setTheme(t) }
+    fun setAutoConnect(v: Boolean) = launch { prefs.setAutoConnect(v) }
+    fun setAutoReconnect(v: Boolean) = launch { prefs.setAutoReconnect(v) }
+    fun setCopies(v: Int) = launch { prefs.setDefaultCopies(v) }
+    fun setPaper(w: PaperWidth) = launch { prefs.setDefaultPaperWidth(w) }
+    fun setPriority(o: List<ConnectionType>) = launch { prefs.setConnectionPriority(o) }
+    fun setDefault(id: Long) = launch { printers.setDefault(id) }
+    fun saveProfile(p: PrinterProfile) = launch { printers.updateProfile(p) }
+    private fun launch(block: suspend () -> Unit) { viewModelScope.launch { block() } }
+}
+
+@Composable
+fun SettingsScreen(onOpenDiagnostics: () -> Unit, vm: SettingsViewModel = hiltViewModel()) {
+    val p by vm.preferences.collectAsStateWithLifecycle()
+    val printers by vm.printerList.collectAsStateWithLifecycle()
+    var editing by remember { mutableStateOf(false) }
+    val default = printers.firstOrNull { it.id == p.defaultPrinterId }
+
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)) { pad ->
+        Column(
+            Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Settings", style = MaterialTheme.typography.headlineSmall)
+
+            SectionCard(title = "Appearance") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThemeMode.entries.forEach { m ->
+                        FilterChip(p.theme == m, { vm.setTheme(m) }, label = { Text(m.label) })
+                    }
+                }
+            }
+
+            SectionCard(title = "Default printer") {
+                DropdownField("Default", printers, default ?: printers.firstOrNull(), { pr -> pr?.let { x -> vm.setDefault(x.id) } }, { it?.name ?: "None" }, Modifier.fillMaxWidth())
+                Text("Selection mode", style = MaterialTheme.typography.labelLarge)
+                DefaultPrinterMode.entries.forEach { m ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(p.mode == m, { vm.setMode(m) })
+                        Column {
+                            Text(m.label, style = MaterialTheme.typography.bodyLarge)
+                            Text(m.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (p.mode == DefaultPrinterMode.CONNECTION_PRIORITY) {
+                    Text("Connection priority (top = preferred)", style = MaterialTheme.typography.labelLarge)
+                    p.connectionPriority.forEachIndexed { i, t ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${i + 1}. ${t.label}", Modifier.weight(1f))
+                            IconButton(onClick = { vm.setPriority(p.connectionPriority.swap(i, i - 1)) }, enabled = i > 0) { Icon(Icons.Default.ArrowUpward, "Move up") }
+                            IconButton(onClick = { vm.setPriority(p.connectionPriority.swap(i, i + 1)) }, enabled = i < p.connectionPriority.lastIndex) { Icon(Icons.Default.ArrowDownward, "Move down") }
+                        }
+                    }
+                }
+                SwitchRow("Auto-connect default printer", p.autoConnect, vm::setAutoConnect, "Connects when the app starts or the default changes")
+                SwitchRow("Auto-reconnect", p.autoReconnect, vm::setAutoReconnect, "Retries when the connection drops")
+            }
+
+            SectionCard(title = "Defaults") {
+                Text("Paper width for new printers", style = MaterialTheme.typography.labelLarge)
+                PaperWidthSelector(p.defaultPaperWidth, false) { if (it != null) vm.setPaper(it) }
+                StepperRow("Default copies", p.defaultCopies, 1..99) { vm.setCopies(it) }
+            }
+
+            SectionCard(title = "Printer profile") {
+                Text(
+                    if (default == null) "Set a default printer to edit its density, margins, code page, auto-cut, feed lines, dithering and timeout."
+                    else "Editing: ${default.name}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Button(onClick = { editing = true }, enabled = default != null) { Text("Edit profile") }
+            }
+
+            SectionCard(title = "Tools") {
+                OutlinedButton(onClick = onOpenDiagnostics) { Text("Open diagnostics") }
+                Text("Nexora Printer 1.0.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    if (editing && default != null) {
+        PrinterProfileEditorDialog(default, onSave = { vm.saveProfile(it); editing = false }, onDismiss = { editing = false })
+    }
+}
+
+private fun <T> List<T>.swap(a: Int, b: Int): List<T> =
+    toMutableList().also { val t = it[a]; it[a] = it[b]; it[b] = t }

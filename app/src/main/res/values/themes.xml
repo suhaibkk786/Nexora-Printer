@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.NexoraPrinter" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F6F9FC</item>
+    </style>
+</resources>
