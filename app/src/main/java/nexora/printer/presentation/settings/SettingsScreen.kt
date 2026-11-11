@@ -33,7 +33,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
     private val printers: PrinterRepository,
-    billing: BillingManager
+    private val billing: BillingManager
 ) : ViewModel() {
     val subscriptionStatus: StateFlow<BillingManager.Status> = billing.status
     val isPro: Boolean get() = billing.isPro()
