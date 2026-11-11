@@ -6,10 +6,10 @@ fun interface Entitlement {
 }
 
 /**
- * Printing is free for everyone. The Nexora logo window that appears while a ticket from a POS prints is part of the free
- * version; Pro (the subscription) lets the owner switch it off.
+ * Printing is free for everyone. The Nexora logo window that appears while a ticket from a POS prints, and the logo shown when
+ * the app opens, are part of the free version; Pro (the subscription) lets the owner switch each of them off.
  */
 object PrintWindowPolicy {
-    /** [chosen] is the "Show print window" setting; without Pro it cannot be switched off. */
+    /** [chosen] is the setting ("Show print window" / "Show logo when the app opens"); without Pro it cannot be switched off. */
     fun show(chosen: Boolean, pro: Boolean): Boolean = !pro || chosen
 }

@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import nexora.printer.core.billing.Entitlement
+import nexora.printer.core.billing.PrintWindowPolicy
 import nexora.printer.domain.model.AppPreferences
 import nexora.printer.domain.model.ThemeMode
 import nexora.printer.domain.repository.PreferencesRepository
@@ -17,10 +19,11 @@ import javax.inject.Inject
 @HiltViewModel
 class AppViewModel @Inject constructor(
     prefs: PreferencesRepository,
-    holder: SharedContentHolder
+    holder: SharedContentHolder,
+    entitlement: Entitlement
 ) : ViewModel() {
     /** null until the settings are read: the start screen waits so it never flashes when the logo is switched off. */
-    val startLogo: StateFlow<Boolean?> = prefs.preferences.map<AppPreferences, Boolean?> { it.showStartLogo }
+    val startLogo: StateFlow<Boolean?> = prefs.preferences.map<AppPreferences, Boolean?> { PrintWindowPolicy.show(it.showStartLogo, entitlement.isPro()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val theme: StateFlow<ThemeMode> = prefs.preferences.map { it.theme }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
