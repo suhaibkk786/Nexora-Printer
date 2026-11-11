@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import nexora.printer.core.billing.Entitlement
 import nexora.printer.core.printer.JobHeader
 import nexora.printer.core.printer.PrinterConnector
 import nexora.printer.domain.model.*
@@ -38,9 +39,17 @@ class PrintDispatcher @Inject constructor(
     private val prefs: PreferencesRepository,
     private val jobs: PrintJobRepository,
     private val connector: PrinterConnector,
-    private val header: JobHeader
+    private val header: JobHeader,
+    private val entitlement: Entitlement
 ) {
+    /** Without a subscription check (tests, free builds that build the dispatcher by hand). */
+    constructor(
+        printers: PrinterRepository, prefs: PreferencesRepository, jobs: PrintJobRepository,
+        connector: PrinterConnector, header: JobHeader
+    ) : this(printers, prefs, jobs, connector, header, Entitlement { true })
+
     suspend fun print(req: PrintRequest, explicitPrinterId: Long? = null): PrintOutcome {
+        if (!entitlement.canPrint()) return PrintOutcome.NoPrinter(SUBSCRIPTION_NEEDED)
         val all = printers.observePrinters().first()
         val p = prefs.preferences.first()
 
@@ -60,9 +69,8 @@ class PrintDispatcher @Inject constructor(
                 System.currentTimeMillis(), JobStatus.PENDING, null)
         )
         return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) {
-            // a ticket from another app prints as that app made it; only the logo can be added on top (a setting)
-            if (req.raw) header.build(printer, p.printLogoOnPosTickets, false) + req.render(printer)
-            else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
+            // a ticket from another app prints exactly as that app made it
+            if (req.raw) req.render(printer) else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
         }
     }
 
@@ -85,6 +93,7 @@ class PrintDispatcher @Inject constructor(
      * a different printer is used only when the caller explicitly passes its id.
      */
     suspend fun retry(jobId: Long, printerId: Long? = null): PrintOutcome {
+        if (!entitlement.canPrint()) return PrintOutcome.NoPrinter(SUBSCRIPTION_NEEDED)
         val job = jobs.get(jobId) ?: return PrintOutcome.NoPrinter("Job not found.")
         val payload = jobs.getPayload(jobId)
             ?: return PrintOutcome.NoPrinter("This job cannot be retried: its data was not preserved.")
@@ -145,5 +154,6 @@ class PrintDispatcher @Inject constructor(
     companion object {
         /** Larger payloads are not stored (SQLite cursor window limit); such jobs cannot be retried. */
         const val MAX_RETRY_PAYLOAD = 1_500_000
+        const val SUBSCRIPTION_NEEDED = "Printing needs a Nexora Printer Pro subscription. Open the app: Settings \u2192 Subscription."
     }
 }

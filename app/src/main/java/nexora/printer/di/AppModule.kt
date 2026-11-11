@@ -8,6 +8,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import nexora.printer.core.billing.BillingManager
+import nexora.printer.core.billing.Entitlement
 import nexora.printer.core.printer.JobHeader
 import nexora.printer.core.printer.JobHeaderImpl
 import nexora.printer.core.printer.PrinterConnector
@@ -43,4 +45,5 @@ abstract class BindingsModule {
     @Binds abstract fun prefs(impl: PreferencesRepositoryImpl): PreferencesRepository
     @Binds abstract fun header(impl: JobHeaderImpl): JobHeader
     @Binds abstract fun connector(impl: PrinterManager): PrinterConnector
+    @Binds abstract fun entitlement(impl: BillingManager): Entitlement
 }

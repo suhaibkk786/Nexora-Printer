@@ -34,7 +34,8 @@ class PreferencesRepositoryImpl @Inject constructor(
         val PAPER = intPreferencesKey("default_paper_mm")
         val PRIORITY = stringPreferencesKey("connection_priority")
         val PRINT_LOGO = booleanPreferencesKey("print_logo")
-        val PRINT_LOGO_POS = booleanPreferencesKey("print_logo_pos")
+        val SHOW_PRINT_WINDOW = booleanPreferencesKey("show_print_window")
+        val SHOW_START_LOGO = booleanPreferencesKey("show_start_logo")
         val PRINT_TIME = booleanPreferencesKey("print_time")
     }
 
@@ -54,7 +55,8 @@ class PreferencesRepositoryImpl @Inject constructor(
                 defaultPaperWidth = p[Keys.PAPER]?.let { PaperWidth.fromMm(it) } ?: defaults.defaultPaperWidth,
                 printLogo = p[Keys.PRINT_LOGO] ?: defaults.printLogo,
                 printTime = p[Keys.PRINT_TIME] ?: defaults.printTime,
-                printLogoOnPosTickets = p[Keys.PRINT_LOGO_POS] ?: defaults.printLogoOnPosTickets,
+                showPrintWindow = p[Keys.SHOW_PRINT_WINDOW] ?: defaults.showPrintWindow,
+                showStartLogo = p[Keys.SHOW_START_LOGO] ?: defaults.showStartLogo,
                 connectionPriority = parsePriority(p[Keys.PRIORITY]) ?: defaults.connectionPriority
             )
         }
@@ -97,8 +99,12 @@ class PreferencesRepositoryImpl @Inject constructor(
         store.edit { it[Keys.PAPER] = width.mm }
     }
 
-    override suspend fun setPrintLogoOnPosTickets(enabled: Boolean) {
-        store.edit { it[Keys.PRINT_LOGO_POS] = enabled }
+    override suspend fun setShowPrintWindow(enabled: Boolean) {
+        store.edit { it[Keys.SHOW_PRINT_WINDOW] = enabled }
+    }
+
+    override suspend fun setShowStartLogo(enabled: Boolean) {
+        store.edit { it[Keys.SHOW_START_LOGO] = enabled }
     }
 
     override suspend fun setPrintLogo(enabled: Boolean) {

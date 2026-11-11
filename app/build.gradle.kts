@@ -21,6 +21,11 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // The Google Play build is made with -PrequireSubscription=true: printing then needs the "Nexora Printer Pro"
+        // subscription. Every other build (GitHub, sideloaded) is free and fully unlocked.
+        val requireSub = (project.findProperty("requireSubscription") as String?) ?: "false"
+        buildConfigField("boolean", "REQUIRE_SUBSCRIPTION", requireSub)
+        buildConfigField("String", "SUBSCRIPTION_PRODUCT_ID", "\"nexora_printer_pro\"")
     }
 
     // Release signing is read from environment variables only. Nothing secret is committed.
@@ -49,7 +54,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     testOptions { unitTests.isReturnDefaultValues = true }
 }
@@ -80,6 +85,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
     implementation(libs.zxing.core)
+    implementation(libs.billing.ktx)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

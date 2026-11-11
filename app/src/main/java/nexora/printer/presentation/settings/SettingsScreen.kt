@@ -19,6 +19,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import nexora.printer.BuildConfig
+import nexora.printer.core.billing.BillingManager
 import nexora.printer.domain.model.*
 import nexora.printer.domain.repository.PreferencesRepository
 import nexora.printer.domain.repository.PrinterRepository
@@ -29,8 +31,10 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
-    private val printers: PrinterRepository
+    private val printers: PrinterRepository,
+    billing: BillingManager
 ) : ViewModel() {
+    val subscriptionStatus: StateFlow<BillingManager.Status> = billing.status
     val preferences: StateFlow<AppPreferences> = prefs.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppPreferences())
     val printerList: StateFlow<List<PrinterProfile>> = printers.observePrinters()
@@ -43,7 +47,8 @@ class SettingsViewModel @Inject constructor(
     fun setCopies(v: Int) = launch { prefs.setDefaultCopies(v) }
     fun setPrintLogo(v: Boolean) = launch { prefs.setPrintLogo(v) }
     fun setPrintTime(v: Boolean) = launch { prefs.setPrintTime(v) }
-    fun setPrintLogoOnPos(v: Boolean) = launch { prefs.setPrintLogoOnPosTickets(v) }
+    fun setShowPrintWindow(v: Boolean) = launch { prefs.setShowPrintWindow(v) }
+    fun setShowStartLogo(v: Boolean) = launch { prefs.setShowStartLogo(v) }
     fun setPaper(w: PaperWidth) = launch { prefs.setDefaultPaperWidth(w) }
     fun setPriority(o: List<ConnectionType>) = launch { prefs.setConnectionPriority(o) }
     fun setDefault(id: Long) = launch { printers.setDefault(id) }
@@ -52,8 +57,9 @@ class SettingsViewModel @Inject constructor(
 }
 
 @Composable
-fun SettingsScreen(onOpenDiagnostics: () -> Unit, vm: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit, vm: SettingsViewModel = hiltViewModel()) {
     val p by vm.preferences.collectAsStateWithLifecycle()
+    val subscription by vm.subscriptionStatus.collectAsStateWithLifecycle()
     val printers by vm.printerList.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     val default = printers.firstOrNull { it.id == p.defaultPrinterId }
@@ -110,16 +116,32 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, vm: SettingsViewModel = hiltVi
                 SwitchRow("Print date & time", p.printTime, vm::setPrintTime, "Prints the time the job was sent, at the top")
                 Text(
                     if (!p.printLogo && !p.printTime) "Both off: jobs print directly with nothing added."
-                    else "Applies to jobs from this app, shared files and other apps' print dialogs. Tickets from a POS: see the setting below.",
+                    else "Applies to jobs printed from this app, shared files and print dialogs. POS tickets print exactly as the POS made them.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            SectionCard(title = "Tickets from other apps (POS)") {
+            SectionCard(title = "Logo & print window") {
                 SwitchRow(
-                    "Print logo on POS tickets", p.printLogoOnPosTickets, vm::setPrintLogoOnPos,
-                    "Prints the Nexora X logo at the top of tickets sent by a POS or another app. Off: the ticket prints exactly as that app made it."
+                    "Show print window", p.showPrintWindow, vm::setShowPrintWindow,
+                    "Shows a small window with the Nexora logo while a ticket from a POS or another app prints (like RawBT). Off: it prints silently."
                 )
+                SwitchRow(
+                    "Show logo when the app opens", p.showStartLogo, vm::setShowStartLogo,
+                    "Shows the Nexora logo for a moment at start."
+                )
+            }
+
+            SectionCard(title = "Subscription") {
+                Text(
+                    when {
+                        !BuildConfig.REQUIRE_SUBSCRIPTION -> "This build is free: all features are unlocked."
+                        subscription == BillingManager.Status.ACTIVE -> "Nexora Printer Pro: active."
+                        else -> "Not subscribed: printing is locked."
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Button(onClick = onOpenSubscription) { Text("Plans & subscription") }
             }
 
             SectionCard(title = "Printer profile") {

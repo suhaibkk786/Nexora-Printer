@@ -1,14 +1,29 @@
 package nexora.printer.presentation.navigation
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import nexora.printer.R
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,6 +41,7 @@ import nexora.printer.presentation.history.HistoryScreen
 import nexora.printer.presentation.print.PrintScreen
 import nexora.printer.presentation.printers.PrintersScreen
 import nexora.printer.presentation.settings.SettingsScreen
+import nexora.printer.presentation.subscription.SubscriptionScreen
 import nexora.printer.presentation.theme.NexoraTheme
 
 object Routes {
@@ -35,6 +51,7 @@ object Routes {
     const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val DIAGNOSTICS = "diagnostics"
+    const val SUBSCRIPTION = "subscription"
     fun print(tab: Int = 0) = "print?tab=$tab"
 }
 
@@ -52,6 +69,17 @@ private val items = listOf(
 fun NexoraApp(appVm: AppViewModel = hiltViewModel()) {
     val theme by appVm.theme.collectAsStateWithLifecycle()
     val pending by appVm.pendingShare.collectAsStateWithLifecycle()
+    val startLogo by appVm.startLogo.collectAsStateWithLifecycle()
+    val paywallNeeded by appVm.paywallNeeded.collectAsStateWithLifecycle()
+    var splashDone by rememberSaveable { mutableStateOf(false) }
+    var paywallShown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(startLogo) {
+        when (startLogo) {
+            null -> Unit
+            false -> splashDone = true
+            true -> { if (!splashDone) delay(1400); splashDone = true }
+        }
+    }
     NexoraTheme(theme) {
         val nav = rememberNavController()
         val entry by nav.currentBackStackEntryAsState()
@@ -64,6 +92,15 @@ fun NexoraApp(appVm: AppViewModel = hiltViewModel()) {
             }
         }
 
+        // Google Play build without a subscription: the plans screen opens first (once per launch)
+        LaunchedEffect(paywallNeeded) {
+            if (paywallNeeded && !paywallShown) {
+                paywallShown = true
+                nav.navigate(Routes.SUBSCRIPTION) { launchSingleTop = true }
+            }
+        }
+
+        Box(Modifier.fillMaxSize()) {
         Scaffold(
             bottomBar = {
                 if (destination?.route != Routes.DIAGNOSTICS) {
@@ -117,7 +154,13 @@ fun NexoraApp(appVm: AppViewModel = hiltViewModel()) {
                     HistoryScreen(onOpenPrinters = { nav.navigate(Routes.PRINTERS) { launchSingleTop = true } })
                 }
                 composable(Routes.SETTINGS) {
-                    SettingsScreen(onOpenDiagnostics = { nav.navigate(Routes.DIAGNOSTICS) })
+                    SettingsScreen(
+                        onOpenDiagnostics = { nav.navigate(Routes.DIAGNOSTICS) },
+                        onOpenSubscription = { nav.navigate(Routes.SUBSCRIPTION) { launchSingleTop = true } }
+                    )
+                }
+                composable(Routes.SUBSCRIPTION) {
+                    SubscriptionScreen(onBack = { nav.popBackStack() })
                 }
                 composable(Routes.DIAGNOSTICS) {
                     DiagnosticsScreen(
@@ -125,6 +168,28 @@ fun NexoraApp(appVm: AppViewModel = hiltViewModel()) {
                         onOpenPrinters = { nav.navigate(Routes.PRINTERS) }
                     )
                 }
+            }
+        }
+        // the logo shown for a moment when the app opens (a setting)
+        AnimatedVisibility(visible = !splashDone, enter = fadeIn(tween(1)), exit = fadeOut(tween(350))) {
+            StartLogoScreen(showLogo = startLogo == true)
+        }
+        }
+    }
+}
+
+@Composable
+private fun StartLogoScreen(showLogo: Boolean) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+        if (showLogo) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Image(painterResource(R.drawable.nexora_logo), contentDescription = "Nexora", modifier = Modifier.size(120.dp))
+                Spacer(Modifier.height(16.dp))
+                Text("Nexora Printer", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "by Nexora IT Technologies",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

@@ -35,6 +35,7 @@ interface PreferencesRepository {
     suspend fun setDefaultPaperWidth(width: PaperWidth)
     suspend fun setPrintLogo(enabled: Boolean)
     suspend fun setPrintTime(enabled: Boolean)
-    suspend fun setPrintLogoOnPosTickets(enabled: Boolean)
+    suspend fun setShowPrintWindow(enabled: Boolean)
+    suspend fun setShowStartLogo(enabled: Boolean)
     suspend fun setConnectionPriority(order: List<ConnectionType>)
 }

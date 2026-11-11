@@ -59,6 +59,11 @@ Nexora Printer can take the place of RawBT. A POS page opens a link `rawbt:base6
 
 Jobs from the POS appear in History as type "POS ticket". With the mode "Ask every time", POS tickets still go to the default printer (or the first saved one), because nobody is at the screen to pick.
 
+## Print window, start logo and subscription
+
+- **Settings -> Logo & print window**: *Show print window* shows a small window with the Nexora logo while a POS ticket prints (like RawBT); off = silent. *Show logo when the app opens* controls the start logo.
+- **Subscription**: the Google Play build (`-PrequireSubscription=true`) needs the "Nexora Printer Pro" subscription to print; other builds are free. See `docs/PLAY_STORE.md`.
+
 ## Default printer modes
 
 | Mode | Behaviour |

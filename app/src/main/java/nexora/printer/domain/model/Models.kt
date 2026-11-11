@@ -95,8 +95,10 @@ data class AppPreferences(
     val printLogo: Boolean = false,
     /** Print the date and time at the top of every job. */
     val printTime: Boolean = false,
-    /** Also print the logo at the top of tickets sent by another app (a POS). Off by default: the POS ticket prints as it is. */
-    val printLogoOnPosTickets: Boolean = false,
+    /** Show a small window with the Nexora logo while a ticket from another app (a POS) prints, like RawBT. Off: it prints silently. */
+    val showPrintWindow: Boolean = true,
+    /** Show the Nexora logo for a moment when the app opens. */
+    val showStartLogo: Boolean = true,
     val connectionPriority: List<ConnectionType> =
         listOf(ConnectionType.USB, ConnectionType.WIFI, ConnectionType.BLUETOOTH)
 )

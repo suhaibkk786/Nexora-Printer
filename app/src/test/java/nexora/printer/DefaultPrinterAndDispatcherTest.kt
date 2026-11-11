@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
+import nexora.printer.core.billing.Entitlement
 import nexora.printer.core.printer.JobHeader
 import nexora.printer.core.printer.PrinterConnector
 import nexora.printer.domain.model.*
@@ -75,7 +76,8 @@ private class FakePrefs(initial: AppPreferences) : PreferencesRepository {
     override suspend fun setDefaultPaperWidth(width: PaperWidth) {}
     override suspend fun setPrintLogo(enabled: Boolean) { state.value = state.value.copy(printLogo = enabled) }
     override suspend fun setPrintTime(enabled: Boolean) { state.value = state.value.copy(printTime = enabled) }
-    override suspend fun setPrintLogoOnPosTickets(enabled: Boolean) { state.value = state.value.copy(printLogoOnPosTickets = enabled) }
+    override suspend fun setShowPrintWindow(enabled: Boolean) { state.value = state.value.copy(showPrintWindow = enabled) }
+    override suspend fun setShowStartLogo(enabled: Boolean) { state.value = state.value.copy(showStartLogo = enabled) }
     override suspend fun setConnectionPriority(order: List<ConnectionType>) {}
 }
 
@@ -182,16 +184,26 @@ class PrintDispatcherTest {
         assertArrayEquals(byteArrayOf(9, 9, 1, 2, 3), on.sent.single().second)
     }
 
-    @Test fun posTicketsGetTheLogoOnlyWhenThatSettingIsOn() = runTest {
+    @Test fun posTicketsPrintExactlyAsSentEvenWithHeaderSettingsOn() = runTest {
         val header = JobHeader { _, logo, time -> if (logo || time) byteArrayOf(9, 9) else ByteArray(0) }
         val ticket = byteArrayOf(0x1B, 0x40, 5)
-        val off = FakeConnector()
-        // the general logo setting does not touch POS tickets
-        PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1, printLogo = true, printTime = true)), FakeJobs(), off, header).printRaw("pos", ticket)
-        assertArrayEquals(ticket, off.sent.single().second)
-        val on = FakeConnector()
-        PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1, printLogoOnPosTickets = true)), FakeJobs(), on, header).printRaw("pos", ticket)
-        assertArrayEquals(byteArrayOf(9, 9) + ticket, on.sent.single().second)
+        val conn = FakeConnector()
+        PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1, printLogo = true, printTime = true)), FakeJobs(), conn, header).printRaw("pos", ticket)
+        assertArrayEquals(ticket, conn.sent.single().second)
+    }
+
+    @Test fun printingIsBlockedWithoutASubscriptionWhenRequired() = runTest {
+        val conn = FakeConnector()
+        val d = PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1)), FakeJobs(), conn, NO_HEADER, Entitlement { false })
+        assertTrue(d.print(req()) is PrintOutcome.NoPrinter)
+        assertTrue(d.printRaw("pos", byteArrayOf(1)) is PrintOutcome.NoPrinter)
+        assertTrue(conn.sent.isEmpty())
+    }
+
+    @Test fun showPrintWindowAndStartLogoAreOnByDefault() {
+        val p = AppPreferences()
+        assertTrue(p.showPrintWindow)
+        assertTrue(p.showStartLogo)
     }
 
     @Test fun posTicketGoesToDefaultPrinterEvenWhenAskingEveryTime() = runTest {
