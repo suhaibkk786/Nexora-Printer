@@ -18,7 +18,16 @@ jobs:
         with:
           gradle-version: 8.9
       - name: Unit tests
-        run: gradle --no-daemon test
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon test 2>&1 | tee build.log
+      - name: Show build errors
+        if: failure()
+        shell: bash
+        run: |
+          # copies the compiler errors into the run's annotations, so they are visible on the run page
+          grep -E "^e: |^w: .*error|FAILED|What went wrong|Could not|Unresolved|error:" -A1 build.log | head -60 | sed -e 's/%/%25/g' | while IFS= read -r line; do echo "::error::${line}"; done
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
       - name: Upload debug APK
