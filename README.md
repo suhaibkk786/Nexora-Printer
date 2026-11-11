@@ -83,3 +83,5 @@ See `docs/FEATURES.md` and `docs/TEST_REPORT.md`.
 ## License
 
 MIT
+
+Developed by Nexora IT Technologies · https://www.nexoraittechnologies.com

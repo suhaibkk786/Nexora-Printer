@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -124,7 +125,15 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, vm: SettingsViewModel = hiltVi
 
             SectionCard(title = "Tools") {
                 OutlinedButton(onClick = onOpenDiagnostics) { Text("Open diagnostics") }
-                Text("Nexora Printer 1.0.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            val uriHandler = LocalUriHandler.current
+            SectionCard(title = "About") {
+                Text("Nexora Printer 1.0.0", style = MaterialTheme.typography.bodyLarge)
+                Text("Developed by Nexora IT Technologies", style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { runCatching { uriHandler.openUri("https://www.nexoraittechnologies.com") } }) {
+                    Text("www.nexoraittechnologies.com")
+                }
             }
         }
     }
