@@ -1,7 +1,7 @@
 # Selling Nexora Printer on Google Play (subscription)
 
-**Printing is free.** The subscription, **Nexora Printer Pro**, only removes the Nexora logo window that appears while a ticket
-from a POS prints. The Play Store build is a normal build made with `-PrequireSubscription=true`; in it the logo window always
+**Printing is free.** The subscription, **Nexora Printer Pro**, only removes the Nexora logos: the window that appears while a ticket
+from a POS prints, and the logo shown when the app opens. The Play Store build is a normal build made with `-PrequireSubscription=true`; in it the logo window always
 shows until the owner subscribes. Every other build (GitHub debug APK, sideloaded) is fully unlocked.
 
 ## What the app does
@@ -11,7 +11,7 @@ shows until the owner subscribes. Every other build (GitHub debug APK, sideloade
 - Settings -> Subscription opens the plans screen (plans, prices and free trials come straight from Google Play), with
   Restore purchases and Manage / cancel (opens Google Play subscriptions), Terms and Privacy links.
 - The last confirmed subscription is remembered for 3 days, so it keeps working when the tablet is offline.
-- The logo shown when the app opens is a separate free setting.
+- The logo shown when the app opens works the same way: always shown without Pro; Pro can switch it off (Settings -> *Show logo when the app opens*).
 
 ## One-time setup in Google Play Console
 

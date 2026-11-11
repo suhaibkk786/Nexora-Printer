@@ -130,10 +130,12 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                     else "A small window with the Nexora logo shows while a POS ticket prints. Subscribe to Nexora Printer Pro to remove it.",
                     enabled = pro
                 )
-                if (!pro) TextButton(onClick = onOpenSubscription) { Text("Remove the logo window \u2013 Nexora Printer Pro") }
+                if (!pro) TextButton(onClick = onOpenSubscription) { Text("Remove the logos \u2013 Nexora Printer Pro") }
                 SwitchRow(
-                    "Show logo when the app opens", p.showStartLogo, vm::setShowStartLogo,
-                    "Shows the Nexora logo for a moment at start."
+                    "Show logo when the app opens", p.showStartLogo || !pro, vm::setShowStartLogo,
+                    if (pro) "Shows the Nexora logo for a moment when the app opens. Off: the app opens straight to the home screen."
+                    else "The Nexora logo shows for a moment when the app opens. Subscribe to Nexora Printer Pro to remove it.",
+                    enabled = pro
                 )
             }
 
@@ -141,8 +143,8 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                 Text(
                     when {
                         !BuildConfig.REQUIRE_SUBSCRIPTION -> "This build is free: all features are unlocked."
-                        subscription == BillingManager.Status.ACTIVE -> "Nexora Printer Pro: active. The logo window is removed."
-                        else -> "Printing is free. Nexora Printer Pro removes the Nexora logo window shown while POS tickets print."
+                        subscription == BillingManager.Status.ACTIVE -> "Nexora Printer Pro: active. You can remove the Nexora logos above."
+                        else -> "Printing is free. Nexora Printer Pro removes the Nexora logo window shown while POS tickets print, and the logo shown when the app opens."
                     },
                     style = MaterialTheme.typography.bodyMedium
                 )

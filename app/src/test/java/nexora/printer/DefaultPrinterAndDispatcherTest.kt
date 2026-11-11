@@ -197,6 +197,14 @@ class PrintDispatcherTest {
         assertTrue(PrintWindowPolicy.show(chosen = true, pro = false))
     }
 
+    @Test fun startLogoFollowsTheSameRule() {
+        // not subscribed: the start logo always shows, whatever the setting says
+        assertTrue(PrintWindowPolicy.show(chosen = false, pro = false))
+        // subscribed: the setting decides
+        assertFalse(PrintWindowPolicy.show(chosen = false, pro = true))
+        assertTrue(PrintWindowPolicy.show(chosen = true, pro = true))
+    }
+
     @Test fun proCanSwitchTheLogoWindowOff() {
         assertFalse(PrintWindowPolicy.show(chosen = false, pro = true))
         assertTrue(PrintWindowPolicy.show(chosen = true, pro = true))
