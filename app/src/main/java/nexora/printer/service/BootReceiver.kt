@@ -8,7 +8,8 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        val enabled = context.getSharedPreferences(ServerConfig.FILE, Context.MODE_PRIVATE).getBoolean(ServerConfig.KEY_ENABLED, true)
-        if (enabled) runCatching { PrintServerService.start(context) }
+        val sp = context.getSharedPreferences(ServerConfig.FILE, Context.MODE_PRIVATE)
+        val on = sp.getBoolean(ServerConfig.KEY_ENABLED, true) || sp.getBoolean(ServerConfig.KEY_LAN, true)
+        if (on) runCatching { PrintServerService.start(context) }
     }
 }

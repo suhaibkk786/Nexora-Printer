@@ -29,14 +29,20 @@ class PrintServerService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var server: PrintServer? = null
+    private var lan: RawTcpServer? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showNotification()
-        if (server == null) {
+        if (server == null && config.enabled) {
             val s = PrintServer(dispatcher, config)
             server = s
+            scope.launch { runCatching { s.run() } }
+        }
+        if (lan == null && config.lanEnabled) {
+            val s = RawTcpServer(dispatcher, config)
+            lan = s
             scope.launch { runCatching { s.run() } }
         }
         return START_STICKY
@@ -45,6 +51,8 @@ class PrintServerService : Service() {
     override fun onDestroy() {
         server?.stop()
         server = null
+        lan?.stop()
+        lan = null
         scope.cancel()
         super.onDestroy()
     }
@@ -55,7 +63,7 @@ class PrintServerService : Service() {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(this, CHANNEL)
             .setContentTitle("Nexora Printer is ready")
-            .setContentText("POS tickets print without opening the app")
+            .setContentText("Tickets from your POS web page and from other POS apps (network printer, port ${ServerConfig.LAN_PORT}) print without opening the app")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(open)
             .setOngoing(true)

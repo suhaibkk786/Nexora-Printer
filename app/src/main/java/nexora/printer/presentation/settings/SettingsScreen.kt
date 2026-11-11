@@ -43,8 +43,34 @@ class SettingsViewModel @Inject constructor(
     fun setServerOn(on: Boolean, context: android.content.Context) {
         serverConfig.enabled = on
         serverOn.value = on
-        if (on) runCatching { PrintServerService.start(context) } else PrintServerService.stop(context)
+        restartService(context)
     }
+
+    // the virtual network printer: other POS apps print to this tablet (raw port 9100) like to a LAN receipt printer
+    val lanOn = MutableStateFlow(serverConfig.lanEnabled)
+    val lanShared = MutableStateFlow(serverConfig.lanShared)
+    fun setLanOn(on: Boolean, context: android.content.Context) {
+        serverConfig.lanEnabled = on
+        lanOn.value = on
+        restartService(context)
+    }
+    fun setLanShared(on: Boolean, context: android.content.Context) {
+        serverConfig.lanShared = on
+        lanShared.value = on
+        restartService(context)
+    }
+    private fun restartService(context: android.content.Context) {
+        PrintServerService.stop(context)
+        if (serverConfig.anyOn) runCatching { PrintServerService.start(context) }
+    }
+
+    /** This tablet's address on the shop Wi-Fi, for other devices (null when not connected to a network). */
+    fun deviceAddress(): String? = runCatching {
+        java.net.NetworkInterface.getNetworkInterfaces().toList()
+            .flatMap { it.inetAddresses.toList() }
+            .firstOrNull { !it.isLoopbackAddress && it is java.net.Inet4Address && it.isSiteLocalAddress }
+            ?.hostAddress
+    }.getOrNull()
     fun setAllowedOrigins(text: String) { serverConfig.allowedOrigins = text; allowedOrigins.value = text }
     val subscriptionStatus: StateFlow<BillingManager.Status> = billing.status
     val isPro: Boolean get() = billing.isPro()
@@ -168,6 +194,29 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                     label = { Text("Allowed POS address (optional)") }, placeholder = { Text("pos.yourshop.com") },
                     supportingText = { Text("Only web pages from this address may print. Empty: any web page opened on this tablet can print.") }
                 )
+            }
+
+            val lanOn by vm.lanOn.collectAsStateWithLifecycle()
+            val lanShared by vm.lanShared.collectAsStateWithLifecycle()
+            SectionCard(title = "Print from other POS apps (network printer)") {
+                SwitchRow(
+                    "Act as a network printer on port ${ServerConfig.LAN_PORT}", lanOn, { vm.setLanOn(it, appContext) },
+                    "Any POS app that can print to a LAN / network / IP receipt printer can print here. In that app add a network printer " +
+                        "(ESC/POS, 58 or 80 mm) with the address below; the ticket then prints on the printer saved in Nexora Printer, " +
+                        "even if that printer is Bluetooth or USB."
+                )
+                Text("Same tablet: 127.0.0.1  ·  port ${ServerConfig.LAN_PORT}", style = MaterialTheme.typography.bodySmall)
+                SwitchRow(
+                    "Also let other devices in the shop use it", lanShared, { vm.setLanShared(it, appContext) },
+                    "Other tablets, phones or PCs on the shop Wi-Fi can print to this tablet's printer. Off: only apps on this tablet."
+                )
+                if (lanShared) {
+                    val address = vm.deviceAddress()
+                    Text(
+                        if (address != null) "Other devices: $address  ·  port ${ServerConfig.LAN_PORT}" else "Connect this tablet to the shop Wi-Fi to get its address.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
 
             SectionCard(title = "Subscription") {

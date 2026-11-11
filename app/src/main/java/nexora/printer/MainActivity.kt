@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) handleIntent(intent)
         // silent printing: the background service runs while this is switched on in Settings
-        if (serverConfig.enabled) runCatching { PrintServerService.start(this) }
+        if (serverConfig.anyOn) runCatching { PrintServerService.start(this) }
         setContent { NexoraApp() }
     }
 
