@@ -26,6 +26,7 @@ import javax.inject.Inject
 class PrintServerService : Service() {
     @Inject lateinit var dispatcher: PrintDispatcher
     @Inject lateinit var config: ServerConfig
+    @Inject lateinit var log: ReceiveLog
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var server: PrintServer? = null
@@ -37,17 +38,17 @@ class PrintServerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showNotification()
         if (server == null && config.enabled) {
-            val s = PrintServer(dispatcher, config)
+            val s = PrintServer(dispatcher, config, log)
             server = s
             scope.launch { runCatching { s.run() } }
         }
         if (lan == null && config.lanEnabled) {
-            val s = RawTcpServer(dispatcher, config)
+            val s = RawTcpServer(dispatcher, config, log)
             lan = s
             scope.launch { runCatching { s.run() } }
         }
         if (bt == null && config.btEnabled) {
-            val s = BluetoothPrintServer(applicationContext, dispatcher)
+            val s = BluetoothPrintServer(applicationContext, dispatcher, log)
             bt = s
             scope.launch { runCatching { s.run() } }
         }

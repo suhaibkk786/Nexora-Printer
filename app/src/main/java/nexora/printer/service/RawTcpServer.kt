@@ -19,13 +19,18 @@ import java.net.SocketTimeoutException
  * ESC/POS bytes here and they are printed on the printer saved in Nexora Printer, whatever that printer's connection is
  * (Bluetooth, USB or Wi-Fi). No change is needed in the other app except choosing "network printer".
  */
-class RawTcpServer(private val dispatcher: PrintDispatcher, private val config: ServerConfig) {
+class RawTcpServer(private val dispatcher: PrintDispatcher, private val config: ServerConfig, private val log: ReceiveLog) {
     @Volatile private var server: ServerSocket? = null
 
     suspend fun run() = coroutineScope {
         // this device only, unless the owner allows the other devices of the shop Wi-Fi
         val bind = if (config.lanShared) null else InetAddress.getByName("127.0.0.1")
-        val socket = withContext(Dispatchers.IO) { ServerSocket(ServerConfig.LAN_PORT, 16, bind) }
+        val socket = try {
+            withContext(Dispatchers.IO) { ServerSocket(ServerConfig.LAN_PORT, 16, bind) }
+        } catch (e: IOException) {
+            log.add("Network ${ServerConfig.LAN_PORT}", "-", 0, "Could not listen on port ${ServerConfig.LAN_PORT}: ${e.message}. Another app (for example RawBT's network server) may be using it - close it.")
+            return@coroutineScope
+        }
         server = socket
         try {
             while (isActive) {
@@ -65,7 +70,14 @@ class RawTcpServer(private val dispatcher: PrintDispatcher, private val config: 
                 val printable = EscPosStatus.answer(buf, n, output)
                 if (printable.isNotEmpty()) data.write(printable)
             }
-            if (data.size() > 0) dispatcher.printRaw("Network printer (port ${ServerConfig.LAN_PORT})", data.toByteArray())
+            val peer = (sock.remoteSocketAddress as? java.net.InetSocketAddress)?.address?.hostAddress ?: "?"
+            val channel = "Network ${ServerConfig.LAN_PORT}"
+            if (data.size() > 0) {
+                val outcome = dispatcher.printRaw("Network printer (port ${ServerConfig.LAN_PORT})", data.toByteArray())
+                log.add(channel, peer, data.size(), log.describe(outcome))
+            } else {
+                log.add(channel, peer, 0, "Connected, but no ticket was sent (only a status check, or nothing)")
+            }
         }
     }
 

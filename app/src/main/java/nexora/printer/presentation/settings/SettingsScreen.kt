@@ -40,8 +40,13 @@ class SettingsViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
     private val printers: PrinterRepository,
     private val billing: BillingManager,
-    private val serverConfig: ServerConfig
+    private val serverConfig: ServerConfig,
+    private val receiveLog: nexora.printer.service.ReceiveLog
 ) : ViewModel() {
+    // what reached this tablet from other apps, and what became of it
+    val receiveEntries = receiveLog.entries
+    val btStatus = receiveLog.btStatus
+    fun clearReceiveLog() = receiveLog.clear()
     val serverOn = MutableStateFlow(serverConfig.enabled)
     val allowedOrigins = MutableStateFlow(serverConfig.allowedOrigins)
     fun setServerOn(on: Boolean, context: android.content.Context) {
@@ -305,6 +310,23 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                         )
                     }
                 }) { Text("Make this tablet visible (5 minutes)") }
+                val btStatus by vm.btStatus.collectAsStateWithLifecycle()
+                Text("Status: " + (if (btOn) btStatus else "off"), style = MaterialTheme.typography.bodySmall)
+            }
+
+            val received by vm.receiveEntries.collectAsStateWithLifecycle()
+            SectionCard(title = "Received from other apps") {
+                Text(
+                    "Every time a POS app, web page or nearby device sends something to this tablet, it is listed here with what happened. " +
+                        "If nothing appears when you print from the other app, it is not reaching Nexora Printer.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (received.isEmpty()) Text("Nothing received yet.", style = MaterialTheme.typography.bodyMedium)
+                received.take(12).forEach { e ->
+                    val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(e.at))
+                    Text("$time · ${e.channel} · ${e.peer} · ${e.bytes} bytes\n→ ${e.result}", style = MaterialTheme.typography.bodySmall)
+                }
+                if (received.isNotEmpty()) OutlinedButton(onClick = { vm.clearReceiveLog() }) { Text("Clear the list") }
             }
 
             SectionCard(title = "Subscription") {

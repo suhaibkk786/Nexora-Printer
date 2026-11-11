@@ -23,21 +23,24 @@ import java.util.UUID
  * It works with POS apps and print utilities that print to a Bluetooth printer, the way RawBT's virtual printer does.
  */
 @SuppressLint("MissingPermission")
-class BluetoothPrintServer(private val context: Context, private val dispatcher: PrintDispatcher) {
+class BluetoothPrintServer(private val context: Context, private val dispatcher: PrintDispatcher, private val log: ReceiveLog) {
     @Volatile private var server: BluetoothServerSocket? = null
 
     suspend fun run() = coroutineScope {
-        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return@coroutineScope
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
+        if (adapter == null) { log.btStatus.value = "This device has no Bluetooth"; return@coroutineScope }
         while (isActive) {
-            if (!adapter.isEnabled || !BluetoothPermissions.hasConnect(context)) { delay(5_000); continue }
+            if (!BluetoothPermissions.hasConnect(context)) { log.btStatus.value = "Waiting: Bluetooth permission is not granted"; delay(5_000); continue }
+            if (!adapter.isEnabled) { log.btStatus.value = "Waiting: Bluetooth is turned off"; delay(5_000); continue }
             val listener = try {
                 adapter.listenUsingRfcommWithServiceRecord("Nexora Printer", SPP_UUID)
             } catch (e: IOException) {
-                delay(5_000); continue
+                log.btStatus.value = "Could not start: ${e.message}"; delay(5_000); continue
             } catch (e: SecurityException) {
-                delay(5_000); continue
+                log.btStatus.value = "Could not start: ${e.message}"; delay(5_000); continue
             }
             server = listener
+            log.btStatus.value = "Ready: other devices can pair and print"
             try {
                 while (isActive) {
                     val client = try {
@@ -82,7 +85,13 @@ class BluetoothPrintServer(private val context: Context, private val dispatcher:
                     delay(40)
                 }
             }
-            if (data.size() > 0) dispatcher.printRaw("Nearby device (Bluetooth)", data.toByteArray())
+            val peer = runCatching { s.remoteDevice?.let { (it.name ?: "device") + " " + it.address } }.getOrNull() ?: "?"
+            if (data.size() > 0) {
+                val outcome = dispatcher.printRaw("Nearby device (Bluetooth)", data.toByteArray())
+                log.add("Bluetooth", peer, data.size(), log.describe(outcome))
+            } else {
+                log.add("Bluetooth", peer, 0, "Connected, but no ticket was sent (only a status check, or nothing)")
+            }
         }
     }
 

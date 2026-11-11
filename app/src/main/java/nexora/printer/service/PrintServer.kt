@@ -21,7 +21,7 @@ import java.net.Socket
  *   POST /print   body: the ESC/POS bytes as base64 text (or a rawbt:base64,... link, or the raw bytes)
  *   GET  /ping    answers {"ok":true} so the POS can tell the service is running
  */
-class PrintServer(private val dispatcher: PrintDispatcher, private val config: ServerConfig) {
+class PrintServer(private val dispatcher: PrintDispatcher, private val config: ServerConfig, private val log: ReceiveLog) {
     @Volatile private var server: ServerSocket? = null
 
     /** Serves until [stop] is called or the coroutine is cancelled. */
@@ -78,7 +78,9 @@ class PrintServer(private val dispatcher: PrintDispatcher, private val config: S
     private suspend fun print(body: ByteArray, origin: String?): ByteArray {
         val bytes = RawPrintLink.decodeBody(body)
             ?: return MiniHttp.response(400, """{"ok":false,"error":"empty ticket"}""", origin)
-        return when (val outcome = dispatcher.printRaw("POS ticket", bytes)) {
+        val outcome = dispatcher.printRaw("POS ticket", bytes)
+        log.add("Web page", origin ?: "this device", bytes.size, log.describe(outcome))
+        return when (outcome) {
             is PrintOutcome.Success -> MiniHttp.response(200, """{"ok":true,"printer":${json(outcome.printerName)}}""", origin)
             is PrintOutcome.Failed -> MiniHttp.response(500, """{"ok":false,"error":${json(outcome.message)}}""", origin)
             is PrintOutcome.NoPrinter -> MiniHttp.response(500, """{"ok":false,"error":${json(outcome.reason)}}""", origin)
