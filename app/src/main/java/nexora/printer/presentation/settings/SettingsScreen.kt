@@ -1,5 +1,8 @@
 package nexora.printer.presentation.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +25,7 @@ import kotlinx.coroutines.launch
 import nexora.printer.BuildConfig
 import nexora.printer.core.billing.BillingManager
 import nexora.printer.core.billing.LicenseInfo
+import nexora.printer.core.bluetooth.BluetoothPermissions
 import nexora.printer.domain.model.*
 import nexora.printer.domain.repository.PreferencesRepository
 import nexora.printer.domain.repository.PrinterRepository
@@ -59,6 +63,30 @@ class SettingsViewModel @Inject constructor(
         lanShared.value = on
         restartService(context)
     }
+    // where bills go: printer / printer and Gallery / only the Gallery
+    val outputMode = MutableStateFlow(serverConfig.outputMode)
+    fun setOutputMode(m: ServerConfig.OutputMode) { serverConfig.outputMode = m; outputMode.value = m }
+    val galleryInfo = MutableStateFlow(galleryText())
+    fun refreshGallery() { galleryInfo.value = galleryText() }
+    private fun galleryText(): String {
+        val err = serverConfig.galleryError
+        val at = serverConfig.galleryLastAt
+        val time = if (at == 0L) "" else java.text.SimpleDateFormat("dd MMM HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(at))
+        return when {
+            serverConfig.galleryCount == 0 && err == null -> "Nothing saved yet. Print a bill and a picture appears in the Gallery."
+            err != null && (serverConfig.galleryCount == 0 || at > 0) && serverConfig.galleryLastPath == null -> "Last try $time failed: $err"
+            else -> "Saved ${serverConfig.galleryCount} so far · last at $time · ${serverConfig.galleryLastPath ?: ""}" + (if (err != null) "\nThe latest try failed: $err" else "")
+        }
+    }
+
+    // "print from a nearby device": a virtual Bluetooth printer other phones and POS apps can pair with
+    val btOn = MutableStateFlow(serverConfig.btEnabled)
+    fun setBtOn(on: Boolean, context: android.content.Context) {
+        serverConfig.btEnabled = on
+        btOn.value = on
+        restartService(context)
+    }
+
     private fun restartService(context: android.content.Context) {
         PrintServerService.stop(context)
         if (serverConfig.anyOn) runCatching { PrintServerService.start(context) }
@@ -217,6 +245,66 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+            }
+
+            val outputMode by vm.outputMode.collectAsStateWithLifecycle()
+            val galleryInfo by vm.galleryInfo.collectAsStateWithLifecycle()
+            LaunchedEffect(Unit) { while (true) { vm.refreshGallery(); kotlinx.coroutines.delay(2000) } }
+            SectionCard(title = "Where bills go") {
+                listOf(
+                    ServerConfig.OutputMode.PRINTER to "Printer only",
+                    ServerConfig.OutputMode.PRINTER_AND_GALLERY to "Printer, and a picture of the bill in the Gallery",
+                    ServerConfig.OutputMode.GALLERY_ONLY to "Gallery only (nothing is printed)"
+                ).forEach { (mode, label) ->
+                    Row(Modifier.fillMaxWidth().clickable { vm.setOutputMode(mode) }, verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = outputMode == mode, onClick = { vm.setOutputMode(mode) })
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Text(
+                    "Pictures are saved in Gallery → Pictures → \"Nexora Bills\" for every bill that comes from a POS app, a web page or this app. " +
+                        "\"Gallery only\" is a handy way to check what a POS sends without a printer (add a printer once: its paper size is used for the picture).",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(galleryInfo, style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = {
+                    runCatching {
+                        appContext.startActivity(
+                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }) { Text("Open the Gallery") }
+            }
+
+            val btOn by vm.btOn.collectAsStateWithLifecycle()
+            val btPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.setBtOn(true, appContext) }
+            val btName = remember { runCatching { android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.name }.getOrNull() }
+            SectionCard(title = "Print from a nearby device (Bluetooth)") {
+                SwitchRow(
+                    "Show this tablet as a Bluetooth printer", btOn,
+                    { on ->
+                        if (!on) vm.setBtOn(false, appContext)
+                        else if (BluetoothPermissions.hasAll(appContext)) vm.setBtOn(true, appContext)
+                        else btPermission.launch(BluetoothPermissions.required())
+                    },
+                    "Another phone or tablet (or a POS app / print utility on it) pairs with this tablet in its Bluetooth settings and prints to it like to a " +
+                        "Bluetooth receipt printer. The ticket then prints on the printer saved here."
+                )
+                Text(
+                    "1. Tap the button below to make this tablet visible.  2. On the other device open Bluetooth, pair with " +
+                        (if (btName != null) "\"$btName\"" else "this tablet") + ".  3. In its POS app choose that Bluetooth device as the printer.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(onClick = {
+                    runCatching {
+                        appContext.startActivity(
+                            android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
+                                .putExtra(android.bluetooth.BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }) { Text("Make this tablet visible (5 minutes)") }
             }
 
             SectionCard(title = "Subscription") {

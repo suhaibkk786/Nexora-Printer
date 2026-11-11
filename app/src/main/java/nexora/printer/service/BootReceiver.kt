@@ -9,7 +9,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         val sp = context.getSharedPreferences(ServerConfig.FILE, Context.MODE_PRIVATE)
-        val on = sp.getBoolean(ServerConfig.KEY_ENABLED, true) || sp.getBoolean(ServerConfig.KEY_LAN, true)
+        val on = sp.getBoolean(ServerConfig.KEY_ENABLED, true) || sp.getBoolean(ServerConfig.KEY_LAN, true) || sp.getBoolean(ServerConfig.KEY_BT, false)
         if (on) runCatching { PrintServerService.start(context) }
     }
 }

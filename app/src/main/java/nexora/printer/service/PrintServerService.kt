@@ -30,6 +30,7 @@ class PrintServerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var server: PrintServer? = null
     private var lan: RawTcpServer? = null
+    private var bt: BluetoothPrintServer? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -45,6 +46,11 @@ class PrintServerService : Service() {
             lan = s
             scope.launch { runCatching { s.run() } }
         }
+        if (bt == null && config.btEnabled) {
+            val s = BluetoothPrintServer(applicationContext, dispatcher)
+            bt = s
+            scope.launch { runCatching { s.run() } }
+        }
         return START_STICKY
     }
 
@@ -53,6 +59,8 @@ class PrintServerService : Service() {
         server = null
         lan?.stop()
         lan = null
+        bt?.stop()
+        bt = null
         scope.cancel()
         super.onDestroy()
     }

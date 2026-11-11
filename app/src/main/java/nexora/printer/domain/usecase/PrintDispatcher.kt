@@ -38,12 +38,24 @@ class PrintDispatcher @Inject constructor(
     private val prefs: PreferencesRepository,
     private val jobs: PrintJobRepository,
     private val connector: PrinterConnector,
-    private val header: JobHeader
+    private val header: JobHeader,
+    /** Keeps a picture of the bills in the phone's Gallery (Settings → where bills go). */
+    private val gallery: nexora.printer.core.utils.BillGallery? = null
 ) {
 
     suspend fun print(req: PrintRequest, explicitPrinterId: Long? = null): PrintOutcome {
         val all = printers.observePrinters().first()
         val p = prefs.preferences.first()
+
+        // "Gallery only": the bill is not printed, it is saved as a picture (a printer is still needed once, for the paper size)
+        if (gallery?.galleryOnly == true) {
+            val target = explicitPrinterId?.let { id -> all.firstOrNull { it.id == id } }
+                ?: all.firstOrNull { it.id == p.defaultPrinterId } ?: all.firstOrNull()
+                ?: return PrintOutcome.NoPrinter("Add a printer once: its paper size is used for the picture.")
+            val bytes = if (req.raw) req.render(target) else header.build(target, p.printLogo, p.printTime) + req.render(target)
+            val err = gallery.saveNow(bytes, target)
+            return if (err == null) PrintOutcome.Success(0, "Gallery") else PrintOutcome.Failed(0, target, "Could not save to the Gallery: $err")
+        }
 
         val printer: PrinterProfile = if (explicitPrinterId != null) {
             all.firstOrNull { it.id == explicitPrinterId }
@@ -62,7 +74,9 @@ class PrintDispatcher @Inject constructor(
         )
         return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) {
             // a ticket from another app prints exactly as that app made it
-            if (req.raw) req.render(printer) else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
+            val bytes = if (req.raw) req.render(printer) else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
+            gallery?.saveCopy(bytes, printer)       // "Printer and Gallery": a picture of the bill is kept too
+            bytes
         }
     }
 
