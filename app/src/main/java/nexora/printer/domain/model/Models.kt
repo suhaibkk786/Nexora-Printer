@@ -95,6 +95,8 @@ data class AppPreferences(
     val printLogo: Boolean = false,
     /** Print the date and time at the top of every job. */
     val printTime: Boolean = false,
+    /** Also print the logo at the top of tickets sent by another app (a POS). Off by default: the POS ticket prints as it is. */
+    val printLogoOnPosTickets: Boolean = false,
     val connectionPriority: List<ConnectionType> =
         listOf(ConnectionType.USB, ConnectionType.WIFI, ConnectionType.BLUETOOTH)
 )

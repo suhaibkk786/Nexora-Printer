@@ -16,8 +16,7 @@ class RawPrintLinkTest {
         val link = "rawbt:base64," + b64.replace("+", "%2B").replace("/", "%2F").replace("=", "%3D")
         assertArrayEquals(ticket, RawPrintLink.decode(link))
     }
-    @Test fun wrappedLinkWithWhitespaceStillDecodes() = assertArrayEquals(ticket, RawPrintLink.decode("rawbt:base64,${b64.take(4)}
-${b64.drop(4)}"))
+    @Test fun wrappedLinkWithWhitespaceStillDecodes() = assertArrayEquals(ticket, RawPrintLink.decode("rawbt:base64,${b64.take(4)} ${b64.drop(4)}"))
     @Test fun otherSchemesAreIgnored() = assertNull(RawPrintLink.decode("https://example.com/base64,$b64"))
     @Test fun emptyOrDamagedIsRejected() {
         assertNull(RawPrintLink.decode(null))

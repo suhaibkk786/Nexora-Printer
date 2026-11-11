@@ -43,6 +43,7 @@ class SettingsViewModel @Inject constructor(
     fun setCopies(v: Int) = launch { prefs.setDefaultCopies(v) }
     fun setPrintLogo(v: Boolean) = launch { prefs.setPrintLogo(v) }
     fun setPrintTime(v: Boolean) = launch { prefs.setPrintTime(v) }
+    fun setPrintLogoOnPos(v: Boolean) = launch { prefs.setPrintLogoOnPosTickets(v) }
     fun setPaper(w: PaperWidth) = launch { prefs.setDefaultPaperWidth(w) }
     fun setPriority(o: List<ConnectionType>) = launch { prefs.setConnectionPriority(o) }
     fun setDefault(id: Long) = launch { printers.setDefault(id) }
@@ -109,8 +110,15 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, vm: SettingsViewModel = hiltVi
                 SwitchRow("Print date & time", p.printTime, vm::setPrintTime, "Prints the time the job was sent, at the top")
                 Text(
                     if (!p.printLogo && !p.printTime) "Both off: jobs print directly with nothing added."
-                    else "Applies to every print job, including test prints.",
+                    else "Applies to jobs from this app, shared files and other apps' print dialogs. Tickets from a POS: see the setting below.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            SectionCard(title = "Tickets from other apps (POS)") {
+                SwitchRow(
+                    "Print logo on POS tickets", p.printLogoOnPosTickets, vm::setPrintLogoOnPos,
+                    "Prints the Nexora X logo at the top of tickets sent by a POS or another app. Off: the ticket prints exactly as that app made it."
                 )
             }
 

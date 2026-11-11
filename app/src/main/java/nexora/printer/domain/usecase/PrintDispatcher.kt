@@ -60,7 +60,9 @@ class PrintDispatcher @Inject constructor(
                 System.currentTimeMillis(), JobStatus.PENDING, null)
         )
         return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) {
-            if (req.raw) req.render(printer) else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
+            // a ticket from another app prints as that app made it; only the logo can be added on top (a setting)
+            if (req.raw) header.build(printer, p.printLogoOnPosTickets, false) + req.render(printer)
+            else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
         }
     }
 
