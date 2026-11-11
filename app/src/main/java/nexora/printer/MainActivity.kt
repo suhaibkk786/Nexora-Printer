@@ -9,6 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.content.IntentCompat
 import dagger.hilt.android.AndroidEntryPoint
 import nexora.printer.presentation.navigation.NexoraApp
+import nexora.printer.service.PrintServerService
+import nexora.printer.service.ServerConfig
 import nexora.printer.presentation.print.SharedContent
 import nexora.printer.presentation.print.SharedContentHolder
 import javax.inject.Inject
@@ -16,11 +18,14 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var sharedHolder: SharedContentHolder
+    @Inject lateinit var serverConfig: ServerConfig
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (savedInstanceState == null) handleIntent(intent)
+        // silent printing: the background service runs while this is switched on in Settings
+        if (serverConfig.enabled) runCatching { PrintServerService.start(this) }
         setContent { NexoraApp() }
     }
 

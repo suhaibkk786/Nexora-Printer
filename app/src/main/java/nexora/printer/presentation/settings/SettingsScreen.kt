@@ -25,6 +25,8 @@ import nexora.printer.core.billing.LicenseInfo
 import nexora.printer.domain.model.*
 import nexora.printer.domain.repository.PreferencesRepository
 import nexora.printer.domain.repository.PrinterRepository
+import nexora.printer.service.PrintServerService
+import nexora.printer.service.ServerConfig
 import nexora.printer.presentation.preview.*
 import nexora.printer.presentation.printers.PrinterProfileEditorDialog
 import javax.inject.Inject
@@ -33,8 +35,17 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
     private val printers: PrinterRepository,
-    private val billing: BillingManager
+    private val billing: BillingManager,
+    private val serverConfig: ServerConfig
 ) : ViewModel() {
+    val serverOn = MutableStateFlow(serverConfig.enabled)
+    val allowedOrigins = MutableStateFlow(serverConfig.allowedOrigins)
+    fun setServerOn(on: Boolean, context: android.content.Context) {
+        serverConfig.enabled = on
+        serverOn.value = on
+        if (on) runCatching { PrintServerService.start(context) } else PrintServerService.stop(context)
+    }
+    fun setAllowedOrigins(text: String) { serverConfig.allowedOrigins = text; allowedOrigins.value = text }
     val subscriptionStatus: StateFlow<BillingManager.Status> = billing.status
     val isPro: Boolean get() = billing.isPro()
     val licensed: StateFlow<LicenseInfo?> = billing.license
@@ -139,6 +150,23 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                     if (pro) "Shows the Nexora logo for a moment when the app opens. Off: the app opens straight to the home screen."
                     else "The Nexora logo shows for a moment when the app opens. Subscribe to Nexora Printer Pro to remove it.",
                     enabled = pro
+                )
+            }
+
+            val serverOn by vm.serverOn.collectAsStateWithLifecycle()
+            val origins by vm.allowedOrigins.collectAsStateWithLifecycle()
+            val appContext = androidx.compose.ui.platform.LocalContext.current
+            SectionCard(title = "Silent printing from a POS") {
+                SwitchRow(
+                    "Print without opening the app", serverOn, { vm.setServerOn(it, appContext) },
+                    "A small background service on this tablet receives the ticket from your POS page and prints it straight away, " +
+                        "like RawBT's local server. A notification stays while it runs."
+                )
+                Text("Address used by the POS: http://127.0.0.1:${ServerConfig.PORT}", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = origins, onValueChange = { vm.setAllowedOrigins(it) }, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Allowed POS address (optional)") }, placeholder = { Text("pos.yourshop.com") },
+                    supportingText = { Text("Only web pages from this address may print. Empty: any web page opened on this tablet can print.") }
                 )
             }
 

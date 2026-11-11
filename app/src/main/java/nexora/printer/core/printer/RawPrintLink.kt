@@ -28,6 +28,22 @@ object RawPrintLink {
         }?.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * The printer bytes in a request body sent by a POS page: a `rawbt:base64,...` link, plain base64 text, or the raw bytes.
+     * Null when the body is empty.
+     */
+    fun decodeBody(body: ByteArray): ByteArray? {
+        if (body.isEmpty()) return null
+        val text = String(body, Charsets.ISO_8859_1).trim()
+        decode(text)?.let { return it }
+        if (text.isNotEmpty() && text.all { it.isLetterOrDigit() && it.code < 128 || it in "+/=_-
+" }) {
+            val decoded = try { Base64.getMimeDecoder().decode(text) } catch (e: IllegalArgumentException) { null }
+            if (decoded != null && decoded.isNotEmpty()) return decoded
+        }
+        return body
+    }
+
     private fun percentDecode(s: String): String {
         if (!s.contains('%')) return s
         val out = StringBuilder()
