@@ -37,6 +37,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import nexora.printer.core.billing.Entitlement
+import nexora.printer.core.billing.PrintWindowPolicy
 import nexora.printer.core.printer.RawPrintLink
 import nexora.printer.domain.model.ThemeMode
 import nexora.printer.domain.repository.PreferencesRepository
@@ -55,12 +57,14 @@ sealed interface TicketUi {
 /**
  * Receives print links from a point-of-sale page (`rawbt:base64,...` or `nexoraprint:base64,...`) and prints the ticket
  * exactly as the POS made it on the default printer. Like RawBT it can show a small window with the Nexora logo while it
- * prints (Settings -> Show print window); with the window off it prints silently and only shows a short message.
+ * prints. That window is part of the free version; with Nexora Printer Pro it can be switched off (Settings -> Show print window)
+ * and the ticket then prints silently with only a short message.
  */
 @AndroidEntryPoint
 class RawPrintActivity : ComponentActivity() {
     @Inject lateinit var dispatcher: PrintDispatcher
     @Inject lateinit var prefs: PreferencesRepository
+    @Inject lateinit var entitlement: Entitlement
 
     private var ui: TicketUi by mutableStateOf<TicketUi>(TicketUi.Printing)
     private var showWindow: Boolean by mutableStateOf(false)
@@ -88,7 +92,8 @@ class RawPrintActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
-            showWindow = prefs.preferences.first().showPrintWindow
+            // without Pro the logo window always shows; Pro can switch it off in Settings
+            showWindow = PrintWindowPolicy.show(prefs.preferences.first().showPrintWindow, entitlement.isPro())
             print()
         }
     }

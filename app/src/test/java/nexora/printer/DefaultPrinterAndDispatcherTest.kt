@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
-import nexora.printer.core.billing.Entitlement
+import nexora.printer.core.billing.PrintWindowPolicy
 import nexora.printer.core.printer.JobHeader
 import nexora.printer.core.printer.PrinterConnector
 import nexora.printer.domain.model.*
@@ -192,12 +192,14 @@ class PrintDispatcherTest {
         assertArrayEquals(ticket, conn.sent.single().second)
     }
 
-    @Test fun printingIsBlockedWithoutASubscriptionWhenRequired() = runTest {
-        val conn = FakeConnector()
-        val d = PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1)), FakeJobs(), conn, NO_HEADER, Entitlement { false })
-        assertTrue(d.print(req()) is PrintOutcome.NoPrinter)
-        assertTrue(d.printRaw("pos", byteArrayOf(1)) is PrintOutcome.NoPrinter)
-        assertTrue(conn.sent.isEmpty())
+    @Test fun logoWindowCannotBeSwitchedOffWithoutPro() {
+        assertTrue(PrintWindowPolicy.show(chosen = false, pro = false))
+        assertTrue(PrintWindowPolicy.show(chosen = true, pro = false))
+    }
+
+    @Test fun proCanSwitchTheLogoWindowOff() {
+        assertFalse(PrintWindowPolicy.show(chosen = false, pro = true))
+        assertTrue(PrintWindowPolicy.show(chosen = true, pro = true))
     }
 
     @Test fun showPrintWindowAndStartLogoAreOnByDefault() {

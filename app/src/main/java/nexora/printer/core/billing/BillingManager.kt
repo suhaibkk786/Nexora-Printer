@@ -31,9 +31,9 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /**
- * Google Play subscription ("Nexora Printer Pro"). Only active in a build made with -PrequireSubscription=true (the Play
- * Store build); every other build is free and fully unlocked. The last confirmed subscription is remembered for a few days,
- * so printing keeps working when the device is offline.
+ * Google Play subscription ("Nexora Printer Pro"). Printing is free; Pro removes the Nexora logo window shown while a POS ticket prints.
+ * Only enforced in a build made with -PrequireSubscription=true (the Play Store build); every other build is fully unlocked.
+ * The last confirmed subscription is remembered for a few days, so it keeps working when the device is offline.
  */
 @Singleton
 class BillingManager @Inject constructor(
@@ -75,7 +75,7 @@ class BillingManager @Inject constructor(
 
     init { refresh() }
 
-    override fun canPrint(): Boolean = !BuildConfig.REQUIRE_SUBSCRIPTION || cachedActive()
+    override fun isPro(): Boolean = !BuildConfig.REQUIRE_SUBSCRIPTION || cachedActive()
 
     val manageUrl: String
         get() = "https://play.google.com/store/account/subscriptions?sku=$PRODUCT_ID&package=${context.packageName}"

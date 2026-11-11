@@ -67,16 +67,15 @@ fun SubscriptionScreen(onBack: () -> Unit, vm: SubscriptionViewModel = hiltViewM
             Image(painterResource(R.drawable.nexora_logo), contentDescription = "Nexora Printer", modifier = Modifier.size(88.dp))
             Text("Nexora Printer Pro", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Print from any POS or app on Bluetooth, USB and Wi-Fi thermal printers.",
+                "Printing is free. Pro removes the Nexora logo window that appears while a ticket from your POS prints.",
                 style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center
             )
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf(
-                    "Prints POS tickets instantly, like RawBT",
-                    "58 mm and 80 mm paper, Arabic and other languages",
-                    "Bluetooth, USB and Wi-Fi printers, default printer and reconnect",
-                    "Print from any app through the Android print dialog",
-                    "Updates and support from Nexora IT Technologies"
+                    "No Nexora logo window while POS tickets print",
+                    "Tickets print silently and instantly, straight to your printer",
+                    "Switch the window back on any time in Settings",
+                    "Supports the development of Nexora Printer"
                 ).forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
             }
 

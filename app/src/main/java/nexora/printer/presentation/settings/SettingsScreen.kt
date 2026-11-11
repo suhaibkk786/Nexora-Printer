@@ -35,6 +35,7 @@ class SettingsViewModel @Inject constructor(
     billing: BillingManager
 ) : ViewModel() {
     val subscriptionStatus: StateFlow<BillingManager.Status> = billing.status
+    val isPro: Boolean get() = billing.isPro()
     val preferences: StateFlow<AppPreferences> = prefs.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppPreferences())
     val printerList: StateFlow<List<PrinterProfile>> = printers.observePrinters()
@@ -122,10 +123,14 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
             }
 
             SectionCard(title = "Logo & print window") {
+                val pro = subscription == BillingManager.Status.ACTIVE && vm.isPro
                 SwitchRow(
-                    "Show print window", p.showPrintWindow, vm::setShowPrintWindow,
-                    "Shows a small window with the Nexora logo while a ticket from a POS or another app prints (like RawBT). Off: it prints silently."
+                    "Show print window", p.showPrintWindow || !pro, vm::setShowPrintWindow,
+                    if (pro) "Shows a small window with the Nexora logo while a ticket from a POS or another app prints. Off: it prints silently."
+                    else "A small window with the Nexora logo shows while a POS ticket prints. Subscribe to Nexora Printer Pro to remove it.",
+                    enabled = pro
                 )
+                if (!pro) TextButton(onClick = onOpenSubscription) { Text("Remove the logo window \u2013 Nexora Printer Pro") }
                 SwitchRow(
                     "Show logo when the app opens", p.showStartLogo, vm::setShowStartLogo,
                     "Shows the Nexora logo for a moment at start."
@@ -136,8 +141,8 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                 Text(
                     when {
                         !BuildConfig.REQUIRE_SUBSCRIPTION -> "This build is free: all features are unlocked."
-                        subscription == BillingManager.Status.ACTIVE -> "Nexora Printer Pro: active."
-                        else -> "Not subscribed: printing is locked."
+                        subscription == BillingManager.Status.ACTIVE -> "Nexora Printer Pro: active. The logo window is removed."
+                        else -> "Printing is free. Nexora Printer Pro removes the Nexora logo window shown while POS tickets print."
                     },
                     style = MaterialTheme.typography.bodyMedium
                 )

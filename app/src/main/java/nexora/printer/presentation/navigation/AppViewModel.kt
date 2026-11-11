@@ -7,8 +7,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import nexora.printer.BuildConfig
-import nexora.printer.core.billing.BillingManager
 import nexora.printer.domain.model.AppPreferences
 import nexora.printer.domain.model.ThemeMode
 import nexora.printer.domain.repository.PreferencesRepository
@@ -19,16 +17,11 @@ import javax.inject.Inject
 @HiltViewModel
 class AppViewModel @Inject constructor(
     prefs: PreferencesRepository,
-    holder: SharedContentHolder,
-    billing: BillingManager
+    holder: SharedContentHolder
 ) : ViewModel() {
     /** null until the settings are read: the start screen waits so it never flashes when the logo is switched off. */
     val startLogo: StateFlow<Boolean?> = prefs.preferences.map<AppPreferences, Boolean?> { it.showStartLogo }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-    /** Google Play build, and no active subscription: the plans screen opens first. */
-    val paywallNeeded: StateFlow<Boolean> = billing.status
-        .map { BuildConfig.REQUIRE_SUBSCRIPTION && it == BillingManager.Status.NOT_SUBSCRIBED }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val theme: StateFlow<ThemeMode> = prefs.preferences.map { it.theme }
         .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
     val pendingShare: StateFlow<SharedContent?> = holder.pending

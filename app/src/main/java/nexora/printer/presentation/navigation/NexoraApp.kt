@@ -70,9 +70,7 @@ fun NexoraApp(appVm: AppViewModel = hiltViewModel()) {
     val theme by appVm.theme.collectAsStateWithLifecycle()
     val pending by appVm.pendingShare.collectAsStateWithLifecycle()
     val startLogo by appVm.startLogo.collectAsStateWithLifecycle()
-    val paywallNeeded by appVm.paywallNeeded.collectAsStateWithLifecycle()
     var splashDone by rememberSaveable { mutableStateOf(false) }
-    var paywallShown by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(startLogo) {
         when (startLogo) {
             null -> Unit
@@ -89,14 +87,6 @@ fun NexoraApp(appVm: AppViewModel = hiltViewModel()) {
         LaunchedEffect(pending) {
             if (pending != null) {
                 nav.navigate(Routes.print(0)) { launchSingleTop = true }
-            }
-        }
-
-        // Google Play build without a subscription: the plans screen opens first (once per launch)
-        LaunchedEffect(paywallNeeded) {
-            if (paywallNeeded && !paywallShown) {
-                paywallShown = true
-                nav.navigate(Routes.SUBSCRIPTION) { launchSingleTop = true }
             }
         }
 

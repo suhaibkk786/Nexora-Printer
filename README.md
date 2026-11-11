@@ -62,7 +62,7 @@ Jobs from the POS appear in History as type "POS ticket". With the mode "Ask eve
 ## Print window, start logo and subscription
 
 - **Settings -> Logo & print window**: *Show print window* shows a small window with the Nexora logo while a POS ticket prints (like RawBT); off = silent. *Show logo when the app opens* controls the start logo.
-- **Subscription**: the Google Play build (`-PrequireSubscription=true`) needs the "Nexora Printer Pro" subscription to print; other builds are free. See `docs/PLAY_STORE.md`.
+- **Subscription (Nexora Printer Pro)**: printing is free. In the Google Play build (`-PrequireSubscription=true`) the Nexora logo window always shows while a POS ticket prints; the subscription lets you switch it off. Other builds are fully unlocked. See `docs/PLAY_STORE.md`.
 
 ## Default printer modes
 
