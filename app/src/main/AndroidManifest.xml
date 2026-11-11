@@ -59,6 +59,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Print links from a point-of-sale web page: rawbt:base64,... (same as RawBT) or nexoraprint:base64,... -->
+        <activity
+            android:name=".RawPrintActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.NexoraPrinter.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="rawbt" />
+                <data android:scheme="nexoraprint" />
+            </intent-filter>
+        </activity>
+
         <!-- Android Print Framework integration (system print dialog / browsers / document apps) -->
         <service
             android:name=".service.NexoraPrintService"

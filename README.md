@@ -49,6 +49,16 @@ GitHub: add secrets `NEXORA_KEYSTORE_BASE64` (`base64 -w0 nexora-release.jks`), 
 4. **Share** text, images or PDFs to Nexora Printer from any app. The system print dialog also lists saved printers (Android PrintService).
 5. **Diagnostics** runs connection, ESC/POS, receipt, QR, barcode and image tests.
 
+## Printing from a point-of-sale (Nexora POS, or any web POS)
+
+Nexora Printer can take the place of RawBT. A POS page opens a link `rawbt:base64,<ESC/POS bytes>` (or `nexoraprint:base64,<...>`); the app decodes it, sends the bytes unchanged to the **default printer** and closes by itself, showing only a short "Printed on ..." message. Nothing is shown on screen and no POS change is needed.
+
+1. Install the app, add the printer (Printers -> Add printer) and make it the default.
+2. In the POS, make the printer of type **Android** (Nexora POS: Devices -> Printers).
+3. The first time a ticket is sent, Android asks which app opens the link: choose **Nexora Printer** and tap **Always**. If RawBT is also installed, uninstall it or clear its "open by default" setting.
+
+Jobs from the POS appear in History as type "POS ticket". With the mode "Ask every time", POS tickets still go to the default printer (or the first saved one), because nobody is at the screen to pick.
+
 ## Default printer modes
 
 | Mode | Behaviour |

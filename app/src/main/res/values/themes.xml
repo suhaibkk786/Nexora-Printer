@@ -2,4 +2,11 @@
     <style name="Theme.NexoraPrinter" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#F6F9FC</item>
     </style>
+    <!-- no window: the print-link activity shows nothing, prints and closes -->
+    <style name="Theme.NexoraPrinter.Transparent" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

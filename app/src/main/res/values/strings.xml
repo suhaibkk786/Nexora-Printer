@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Nexora Printer</string>
+    <string name="raw_print_done">Printed on %1$s</string>
+    <string name="raw_print_failed">Printing failed: %1$s</string>
+    <string name="raw_print_bad_link">This print link is empty or damaged.</string>
+    <string name="raw_print_choose">Choose a default printer in Nexora Printer first.</string>
 </resources>

@@ -29,7 +29,7 @@ enum class DefaultPrinterMode(val label: String, val description: String) {
 enum class ThemeMode(val label: String) { SYSTEM("System"), LIGHT("Light"), DARK("Dark") }
 
 enum class JobType(val label: String) {
-    TEXT("Text"), IMAGE("Image"), PDF("PDF"), QR("QR code"), BARCODE("Barcode"), TEST("Test")
+    TEXT("Text"), IMAGE("Image"), PDF("PDF"), QR("QR code"), BARCODE("Barcode"), TEST("Test"), RAW("POS ticket")
 }
 
 enum class JobStatus { PENDING, SUCCESS, FAILED, CANCELLED }

@@ -19,8 +19,11 @@ class PrintRequest(
     val type: JobType,
     val copies: Int = 1,
     /** Builds the ESC/POS bytes for one copy, for the printer the job is routed to. */
-    val render: suspend (PrinterProfile) -> ByteArray
-)
+    val render: suspend (PrinterProfile) -> ByteArray,
+) {
+    /** Ready-made printer bytes (e.g. from a POS): sent as they are, without the logo / time header. */
+    var raw: Boolean = false
+}
 
 sealed interface PrintOutcome {
     data class Success(val jobId: Long, val printerName: String) : PrintOutcome
@@ -56,7 +59,23 @@ class PrintDispatcher @Inject constructor(
             PrintJob(0, printer.id, req.name, printer.name, printer.connectionType, req.type,
                 System.currentTimeMillis(), JobStatus.PENDING, null)
         )
-        return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) { header.build(printer, p.printLogo, p.printTime) + req.render(printer) }
+        return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) {
+            if (req.raw) req.render(printer) else header.build(printer, p.printLogo, p.printTime) + req.render(printer)
+        }
+    }
+
+    /**
+     * A ticket made by another system (a POS sends ESC/POS bytes). It goes to the default printer - never to a picker, because
+     * nobody is at the screen: with "Ask every time" the default printer (or the first one) is used.
+     */
+    suspend fun printRaw(name: String, bytes: ByteArray): PrintOutcome {
+        fun request() = PrintRequest(name, JobType.RAW, 1) { bytes }.also { it.raw = true }
+        val outcome = print(request())
+        if (outcome !is PrintOutcome.ChoosePrinter) return outcome
+        val defaultId = prefs.preferences.first().defaultPrinterId
+        val target = outcome.candidates.firstOrNull { it.id == defaultId } ?: outcome.candidates.firstOrNull()
+            ?: return PrintOutcome.NoPrinter("No printers saved yet. Add a printer first.")
+        return print(request(), target.id)
     }
 
     /**
