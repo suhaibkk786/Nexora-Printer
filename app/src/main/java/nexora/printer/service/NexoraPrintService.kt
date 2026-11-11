@@ -33,7 +33,7 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class NexoraPrintService : PrintService() {
-    @Inject lateinit var printers: PrinterRepository
+    @Inject lateinit var printerRepo: PrinterRepository
     @Inject lateinit var dispatcher: PrintDispatcher
     @Inject lateinit var renderer: JobRenderer
 
@@ -55,7 +55,7 @@ class NexoraPrintService : PrintService() {
 
         private fun publish() {
             scope.launch {
-                val list = printers.observePrinters().first()
+                val list = printerRepo.observePrinters().first()
                 addPrinters(list.map { info(it) })
             }
         }
