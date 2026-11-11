@@ -33,6 +33,8 @@ class PreferencesRepositoryImpl @Inject constructor(
         val COPIES = intPreferencesKey("default_copies")
         val PAPER = intPreferencesKey("default_paper_mm")
         val PRIORITY = stringPreferencesKey("connection_priority")
+        val PRINT_LOGO = booleanPreferencesKey("print_logo")
+        val PRINT_TIME = booleanPreferencesKey("print_time")
     }
 
     override val preferences: Flow<AppPreferences> = store.data
@@ -49,6 +51,8 @@ class PreferencesRepositoryImpl @Inject constructor(
                 theme = p[Keys.THEME]?.let { n -> ThemeMode.entries.firstOrNull { it.name == n } } ?: defaults.theme,
                 defaultCopies = p[Keys.COPIES] ?: defaults.defaultCopies,
                 defaultPaperWidth = p[Keys.PAPER]?.let { PaperWidth.fromMm(it) } ?: defaults.defaultPaperWidth,
+                printLogo = p[Keys.PRINT_LOGO] ?: defaults.printLogo,
+                printTime = p[Keys.PRINT_TIME] ?: defaults.printTime,
                 connectionPriority = parsePriority(p[Keys.PRIORITY]) ?: defaults.connectionPriority
             )
         }
@@ -89,6 +93,14 @@ class PreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setDefaultPaperWidth(width: PaperWidth) {
         store.edit { it[Keys.PAPER] = width.mm }
+    }
+
+    override suspend fun setPrintLogo(enabled: Boolean) {
+        store.edit { it[Keys.PRINT_LOGO] = enabled }
+    }
+
+    override suspend fun setPrintTime(enabled: Boolean) {
+        store.edit { it[Keys.PRINT_TIME] = enabled }
     }
 
     override suspend fun setConnectionPriority(order: List<ConnectionType>) {

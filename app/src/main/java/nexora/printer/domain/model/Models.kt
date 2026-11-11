@@ -91,6 +91,10 @@ data class AppPreferences(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val defaultCopies: Int = 1,
     val defaultPaperWidth: PaperWidth = PaperWidth.MM58,
+    /** Print the logo at the top of every job. Off by default: jobs print directly. */
+    val printLogo: Boolean = false,
+    /** Print the date and time at the top of every job. */
+    val printTime: Boolean = false,
     val connectionPriority: List<ConnectionType> =
         listOf(ConnectionType.USB, ConnectionType.WIFI, ConnectionType.BLUETOOTH)
 )

@@ -40,6 +40,8 @@ class SettingsViewModel @Inject constructor(
     fun setAutoConnect(v: Boolean) = launch { prefs.setAutoConnect(v) }
     fun setAutoReconnect(v: Boolean) = launch { prefs.setAutoReconnect(v) }
     fun setCopies(v: Int) = launch { prefs.setDefaultCopies(v) }
+    fun setPrintLogo(v: Boolean) = launch { prefs.setPrintLogo(v) }
+    fun setPrintTime(v: Boolean) = launch { prefs.setPrintTime(v) }
     fun setPaper(w: PaperWidth) = launch { prefs.setDefaultPaperWidth(w) }
     fun setPriority(o: List<ConnectionType>) = launch { prefs.setConnectionPriority(o) }
     fun setDefault(id: Long) = launch { printers.setDefault(id) }
@@ -99,6 +101,16 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, vm: SettingsViewModel = hiltVi
                 Text("Paper width for new printers", style = MaterialTheme.typography.labelLarge)
                 PaperWidthSelector(p.defaultPaperWidth, false) { if (it != null) vm.setPaper(it) }
                 StepperRow("Default copies", p.defaultCopies, 1..99) { vm.setCopies(it) }
+            }
+
+            SectionCard(title = "Print header") {
+                SwitchRow("Print logo", p.printLogo, vm::setPrintLogo, "Prints the Nexora X logo at the top of every job")
+                SwitchRow("Print date & time", p.printTime, vm::setPrintTime, "Prints the time the job was sent, at the top")
+                Text(
+                    if (!p.printLogo && !p.printTime) "Both off: jobs print directly with nothing added."
+                    else "Applies to every print job, including test prints.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             SectionCard(title = "Printer profile") {

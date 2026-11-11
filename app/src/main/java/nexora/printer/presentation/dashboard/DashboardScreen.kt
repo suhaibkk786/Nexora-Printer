@@ -15,7 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.ViewModel
@@ -23,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import nexora.printer.R
 import nexora.printer.core.printer.ConnectionState
 import nexora.printer.core.printer.JobRenderer
 import nexora.printer.core.printer.PrinterManager
@@ -150,9 +154,15 @@ private fun Header() {
             .background(Brush.horizontalGradient(listOf(Navy, Teal)), RoundedCornerShape(24.dp))
             .padding(22.dp)
     ) {
-        Column {
-            Text("Nexora Printer", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-            Text("Bluetooth • USB • Wi-Fi thermal printing", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(56.dp).background(Color.White, CircleShape).padding(10.dp)) {
+                Image(painterResource(R.drawable.nexora_logo), contentDescription = "Nexora logo", modifier = Modifier.fillMaxSize())
+            }
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text("Nexora Printer", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text("Bluetooth • USB • Wi-Fi thermal printing", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.85f))
+            }
         }
     }
 }

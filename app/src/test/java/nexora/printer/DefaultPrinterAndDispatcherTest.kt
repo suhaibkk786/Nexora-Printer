@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
+import nexora.printer.core.printer.JobHeader
 import nexora.printer.core.printer.PrinterConnector
 import nexora.printer.domain.model.*
 import nexora.printer.domain.repository.PreferencesRepository
@@ -72,6 +73,8 @@ private class FakePrefs(initial: AppPreferences) : PreferencesRepository {
     override suspend fun setTheme(theme: ThemeMode) {}
     override suspend fun setDefaultCopies(copies: Int) {}
     override suspend fun setDefaultPaperWidth(width: PaperWidth) {}
+    override suspend fun setPrintLogo(enabled: Boolean) { state.value = state.value.copy(printLogo = enabled) }
+    override suspend fun setPrintTime(enabled: Boolean) { state.value = state.value.copy(printTime = enabled) }
     override suspend fun setConnectionPriority(order: List<ConnectionType>) {}
 }
 
@@ -89,6 +92,8 @@ private class FakeJobs : PrintJobRepository {
     override suspend fun clear() { jobs.clear() }
 }
 
+private val NO_HEADER = JobHeader { _, _, _ -> ByteArray(0) }
+
 private class FakeConnector(var fail: Boolean = false) : PrinterConnector {
     val sent = mutableListOf<Pair<Long, ByteArray>>()
     override suspend fun send(profile: PrinterProfile, data: ByteArray): Result<Unit> =
@@ -98,7 +103,7 @@ private class FakeConnector(var fail: Boolean = false) : PrinterConnector {
 
 class PrintDispatcherTest {
     private val printers = FakePrinters(listOf(printer(1), printer(2)))
-    private fun dispatcher(prefs: FakePrefs, jobs: FakeJobs, conn: FakeConnector) = PrintDispatcher(printers, prefs, jobs, conn)
+    private fun dispatcher(prefs: FakePrefs, jobs: FakeJobs, conn: FakeConnector) = PrintDispatcher(printers, prefs, jobs, conn, NO_HEADER)
     private fun req(copies: Int = 1) = PrintRequest("job", JobType.TEXT, copies) { byteArrayOf(1, 2, 3) }
 
     @Test fun printsToDefaultAndRemembersLastUsed() = runTest {
@@ -166,8 +171,18 @@ class PrintDispatcherTest {
         assertEquals(2L, conn.sent.single().first)
     }
 
+    @Test fun headerIsPrependedOnlyWhenEnabled() = runTest {
+        val header = JobHeader { _, logo, time -> if (logo || time) byteArrayOf(9, 9) else ByteArray(0) }
+        val off = FakeConnector()
+        PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1)), FakeJobs(), off, header).print(req())
+        assertArrayEquals(byteArrayOf(1, 2, 3), off.sent.single().second)
+        val on = FakeConnector()
+        PrintDispatcher(printers, FakePrefs(AppPreferences(defaultPrinterId = 1, printLogo = true)), FakeJobs(), on, header).print(req())
+        assertArrayEquals(byteArrayOf(9, 9, 1, 2, 3), on.sent.single().second)
+    }
+
     @Test fun noPrintersSavedGivesClearOutcome() = runTest {
-        val d = PrintDispatcher(FakePrinters(emptyList()), FakePrefs(AppPreferences()), FakeJobs(), FakeConnector())
+        val d = PrintDispatcher(FakePrinters(emptyList()), FakePrefs(AppPreferences()), FakeJobs(), FakeConnector(), NO_HEADER)
         assertTrue(d.print(req()) is PrintOutcome.NoPrinter)
     }
 

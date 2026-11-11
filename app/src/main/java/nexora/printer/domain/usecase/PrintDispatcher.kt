@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import nexora.printer.core.printer.JobHeader
 import nexora.printer.core.printer.PrinterConnector
 import nexora.printer.domain.model.*
 import nexora.printer.domain.repository.PreferencesRepository
@@ -33,7 +34,8 @@ class PrintDispatcher @Inject constructor(
     private val printers: PrinterRepository,
     private val prefs: PreferencesRepository,
     private val jobs: PrintJobRepository,
-    private val connector: PrinterConnector
+    private val connector: PrinterConnector,
+    private val header: JobHeader
 ) {
     suspend fun print(req: PrintRequest, explicitPrinterId: Long? = null): PrintOutcome {
         val all = printers.observePrinters().first()
@@ -54,7 +56,7 @@ class PrintDispatcher @Inject constructor(
             PrintJob(0, printer.id, req.name, printer.name, printer.connectionType, req.type,
                 System.currentTimeMillis(), JobStatus.PENDING, null)
         )
-        return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) { req.render(printer) }
+        return run(jobId, printer, p.autoReconnect, req.copies.coerceIn(1, 99)) { header.build(printer, p.printLogo, p.printTime) + req.render(printer) }
     }
 
     /**

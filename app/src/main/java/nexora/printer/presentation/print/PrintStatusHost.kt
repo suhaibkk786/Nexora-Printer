@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import nexora.printer.domain.model.PrinterProfile
 import nexora.printer.presentation.preview.PrinterPickerDialog
 
@@ -25,19 +26,27 @@ fun PrintStatusHost(
 
     when (status) {
         PrintStatus.Idle -> Unit
-        is PrintStatus.Printing -> AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Printing") },
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
-                    Spacer(Modifier.width(16.dp))
-                    Text(status.label)
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { session.cancel() }) { Text("Cancel") } }
-        )
+        is PrintStatus.Printing -> {
+            // Quick jobs print directly with no dialog; it only appears if the job takes a while.
+            var visible by remember(status) { mutableStateOf(false) }
+            LaunchedEffect(status) {
+                delay(1200)
+                visible = true
+            }
+            if (visible) AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Printing") },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+                        Spacer(Modifier.width(16.dp))
+                        Text(status.label)
+                    }
+                },
+                confirmButton = {},
+                dismissButton = { TextButton(onClick = { session.cancel() }) { Text("Cancel") } }
+            )
+        }
         is PrintStatus.Success -> LaunchedEffect(status) {
             snackbar.showSnackbar(status.message)
             session.dismiss()

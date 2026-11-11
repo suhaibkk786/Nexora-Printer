@@ -33,5 +33,7 @@ interface PreferencesRepository {
     suspend fun setTheme(theme: ThemeMode)
     suspend fun setDefaultCopies(copies: Int)
     suspend fun setDefaultPaperWidth(width: PaperWidth)
+    suspend fun setPrintLogo(enabled: Boolean)
+    suspend fun setPrintTime(enabled: Boolean)
     suspend fun setConnectionPriority(order: List<ConnectionType>)
 }
