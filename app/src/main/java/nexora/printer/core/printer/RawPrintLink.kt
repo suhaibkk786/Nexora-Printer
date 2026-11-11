@@ -36,8 +36,9 @@ object RawPrintLink {
         if (body.isEmpty()) return null
         val text = String(body, Charsets.ISO_8859_1).trim()
         decode(text)?.let { return it }
-        if (text.isNotEmpty() && text.all { it.isLetterOrDigit() && it.code < 128 || it in "+/=_-
-" }) {
+        // plain base64 text: letters, digits, + / = - _ and line breaks only (the bytes of a raw ticket contain other characters)
+        val base64Chars = "+/=_-"
+        if (text.isNotEmpty() && text.all { (it.isLetterOrDigit() && it.code < 128) || it in base64Chars || it == '\r' || it == '\n' }) {
             val decoded = try { Base64.getMimeDecoder().decode(text) } catch (e: IllegalArgumentException) { null }
             if (decoded != null && decoded.isNotEmpty()) return decoded
         }
