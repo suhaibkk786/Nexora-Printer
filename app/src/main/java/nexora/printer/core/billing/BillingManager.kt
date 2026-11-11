@@ -63,6 +63,10 @@ class BillingManager @Inject constructor(
     private val _plans = MutableStateFlow<List<Plan>>(emptyList())
     val plans: StateFlow<List<Plan>> = _plans.asStateFlow()
 
+    /** Pro from a license code instead of a subscription (the owner's own use, a demo, a gift). */
+    private val _license = MutableStateFlow(readLicense())
+    val license: StateFlow<LicenseInfo?> = _license.asStateFlow()
+
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
@@ -75,7 +79,7 @@ class BillingManager @Inject constructor(
 
     init { refresh() }
 
-    override fun isPro(): Boolean = !BuildConfig.REQUIRE_SUBSCRIPTION || cachedActive()
+    override fun isPro(): Boolean = !BuildConfig.REQUIRE_SUBSCRIPTION || cachedActive() || license.value != null
 
     val manageUrl: String
         get() = "https://play.google.com/store/account/subscriptions?sku=$PRODUCT_ID&package=${context.packageName}"
@@ -110,6 +114,31 @@ class BillingManager @Inject constructor(
     }
 
     fun clearMessage() { _message.value = null }
+
+    /** Checks and saves a license code. Returns true when it is valid. */
+    fun activateLicense(code: String): Boolean {
+        val info = LicenseVerifier.verify(code, today())
+        if (info == null) {
+            _message.value = "That license code isn't valid or has expired."
+            return false
+        }
+        cache.edit().putString(KEY_LICENSE, code.trim()).apply()
+        _license.value = info
+        _message.value = null
+        return true
+    }
+
+    fun removeLicense() {
+        cache.edit().remove(KEY_LICENSE).apply()
+        _license.value = null
+    }
+
+    private fun readLicense(): LicenseInfo? = LicenseVerifier.verify(cache.getString(KEY_LICENSE, null), today())
+
+    private fun today(): Int {
+        val c = java.util.Calendar.getInstance()
+        return c.get(java.util.Calendar.YEAR) * 10000 + (c.get(java.util.Calendar.MONTH) + 1) * 100 + c.get(java.util.Calendar.DAY_OF_MONTH)
+    }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
         when (result.responseCode) {
@@ -214,6 +243,7 @@ class BillingManager @Inject constructor(
         val PRODUCT_ID: String = BuildConfig.SUBSCRIPTION_PRODUCT_ID
         private const val KEY_ACTIVE = "active"
         private const val KEY_CHECKED = "checked_at"
+        private const val KEY_LICENSE = "license_code"
         /** How long a confirmed subscription is trusted while Google Play can't be reached. */
         private const val GRACE_MS = 3L * 24 * 60 * 60 * 1000
     }

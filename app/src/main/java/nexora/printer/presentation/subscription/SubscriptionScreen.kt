@@ -24,6 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.OutlinedTextField
+import nexora.printer.core.billing.LicenseInfo
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +60,8 @@ fun SubscriptionScreen(onBack: () -> Unit, vm: SubscriptionViewModel = hiltViewM
     val status by vm.billing.status.collectAsStateWithLifecycle()
     val plans by vm.billing.plans.collectAsStateWithLifecycle()
     val message by vm.billing.message.collectAsStateWithLifecycle()
+    val license by vm.billing.license.collectAsStateWithLifecycle()
+    var code by remember { mutableStateOf("") }
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
@@ -114,6 +121,21 @@ fun SubscriptionScreen(onBack: () -> Unit, vm: SubscriptionViewModel = hiltViewM
                     }
                     TextButton(onClick = { vm.billing.refresh() }) { Text("Restore purchases") }
                 }
+            }
+
+            // Pro without a subscription: a license code from Nexora IT Technologies
+            if (license != null) {
+                Text(
+                    "License active: ${license?.label}" + (license?.untilYyyyMmDd?.let { " (until $it)" } ?: ""),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                TextButton(onClick = { vm.billing.removeLicense() }) { Text("Remove license") }
+            } else {
+                OutlinedTextField(
+                    value = code, onValueChange = { code = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("License code (optional)") }
+                )
+                Button(onClick = { if (vm.billing.activateLicense(code)) code = "" }, enabled = code.isNotBlank()) { Text("Activate license") }
             }
 
             message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }

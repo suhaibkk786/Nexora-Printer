@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import nexora.printer.BuildConfig
 import nexora.printer.core.billing.BillingManager
+import nexora.printer.core.billing.LicenseInfo
 import nexora.printer.domain.model.*
 import nexora.printer.domain.repository.PreferencesRepository
 import nexora.printer.domain.repository.PrinterRepository
@@ -36,6 +37,7 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     val subscriptionStatus: StateFlow<BillingManager.Status> = billing.status
     val isPro: Boolean get() = billing.isPro()
+    val licensed: StateFlow<LicenseInfo?> = billing.license
     val preferences: StateFlow<AppPreferences> = prefs.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppPreferences())
     val printerList: StateFlow<List<PrinterProfile>> = printers.observePrinters()
@@ -61,6 +63,7 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit, vm: SettingsViewModel = hiltViewModel()) {
     val p by vm.preferences.collectAsStateWithLifecycle()
     val subscription by vm.subscriptionStatus.collectAsStateWithLifecycle()
+    val licensed by vm.licensed.collectAsStateWithLifecycle()
     val printers by vm.printerList.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     val default = printers.firstOrNull { it.id == p.defaultPrinterId }
@@ -123,7 +126,7 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
             }
 
             SectionCard(title = "Logo & print window") {
-                val pro = subscription == BillingManager.Status.ACTIVE && vm.isPro
+                val pro = (subscription == BillingManager.Status.ACTIVE || licensed != null) && vm.isPro
                 SwitchRow(
                     "Show print window", p.showPrintWindow || !pro, vm::setShowPrintWindow,
                     if (pro) "Shows a small window with the Nexora logo while a ticket from a POS or another app prints. Off: it prints silently."
@@ -143,6 +146,7 @@ fun SettingsScreen(onOpenDiagnostics: () -> Unit, onOpenSubscription: () -> Unit
                 Text(
                     when {
                         !BuildConfig.REQUIRE_SUBSCRIPTION -> "This build is free: all features are unlocked."
+                        licensed != null -> "Nexora Printer Pro by license: ${licensed?.label}. You can remove the Nexora logos above."
                         subscription == BillingManager.Status.ACTIVE -> "Nexora Printer Pro: active. You can remove the Nexora logos above."
                         else -> "Printing is free. Nexora Printer Pro removes the Nexora logo window shown while POS tickets print, and the logo shown when the app opens."
                     },

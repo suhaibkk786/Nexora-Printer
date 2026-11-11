@@ -46,3 +46,19 @@ Locally:
 - Declare the Bluetooth / USB permissions' purpose in the Play Console "App content" forms.
 - Use Play App Signing; keep the upload keystore safe (never commit it).
 - Subscription rules: show the price, period and renewal terms clearly (the plans screen does), and let people cancel in Google Play.
+
+## Pro without a subscription (your own use, demos)
+
+A license code unlocks Pro (both Nexora logos can be switched off) with no Google Play subscription.
+
+- Make codes on your PC with `python tools/make_license.py code "Label" [--until yyyy-mm-dd]` (needs `pip install cryptography`).
+- The **private key stays in `~/.nexora/license_private.pem`** and is never committed. The app only contains the public key, so a code
+  cannot be forged without it. Back that file up: if you lose it you cannot make new codes, and if you recreate it, old codes stop working.
+- In the app: Settings -> Subscription -> *Plans & subscription* -> **License code** -> *Activate license*.
+- Codes are not tied to one device: anyone you give a code to can use it, so give them only to people you trust, and use `--until`
+  for demos. To revoke a leaked code, make a new key pair (`init` after deleting the old key), put the new public key in
+  `LicenseVerifier.PUBLIC_KEY` and release an update.
+- Free builds (GitHub, sideloaded) are fully unlocked already, so you only need a code on the Google Play build.
+- Google Play rule: use codes only for your own use, testing, demos and gifts. Do not sell codes outside Google Play to unlock features
+  for customers: digital features sold inside a Play app must use Google Play Billing. For testing with the real purchase flow, use
+  Play Console -> Settings -> License testing instead.
